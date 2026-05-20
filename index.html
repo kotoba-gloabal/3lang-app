@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3Lang 図書館 (完成版)</title>
+    <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
+    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+    <style>
+        :root {
+            --bg: linear-gradient(165deg, #fff9e6 0%, #ffe8f0 100%);
+            --title-bg: #ff8fab; --title-shadow: #e85d8a; --card: #ffffff;
+            --tab-inactive: #ffe4ec; --tab-active-ja: #ff6b9d; --tab-active-zh: #ff9f43; --tab-active-en: #54a0ff;
+            --text: #3d3d5c; --muted: #6b6b8a; --passage-bg: #fffef8;
+            --border: #ffd6e8; --success: #2ecc71; --danger: #e74c3c; --accent: #ff8fab;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'M PLUS Rounded 1c', 'Helvetica Neue', Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; min-height: 100vh; }
+        .hidden { display: none !important; }
+        
+        .login-header { text-align: right; padding-bottom: 10px; }
+        h1 { background: var(--title-bg); color: white; text-align: center; padding: 15px; border-radius: 15px; box-shadow: 0 4px 0 var(--title-shadow); margin-bottom: 30px; font-size: 1.5rem; }
+        
+        .library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; padding: 10px; }
+        .book-card { background: var(--card); border-radius: 20px; padding: 25px 15px; text-align: center; cursor: pointer; transition: 0.3s; border: 2px solid var(--border); box-shadow: 0 4px 10px rgba(255,143,171,0.1); }
+        .book-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(255,143,171,0.2); }
+        .book-icon { font-size: 50px; display: block; margin-bottom: 15px; }
+        .level-card { background: #fff; border: 3px solid #ffb8c6; }
+        .level-card:hover { border-color: var(--title-bg); }
+
+        .container { max-width: 700px; margin: 0 auto; background: var(--card); border-radius: 20px; padding: 25px; box-shadow: 0 10px 25px rgba(255,143,171,0.15); }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 12px; cursor: pointer; background: var(--tab-inactive); font-weight: bold; font-size: 1.1rem; color: var(--text); transition: 0.2s; }
+        .tab-btn.active { background: var(--title-bg); color: white; }
+        .lang-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .lang-btn { flex: 1; padding: 10px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 1rem; color: white; opacity: 0.5; transition: 0.2s; }
+        #btn-ja { background: var(--tab-active-ja); } #btn-zh { background: var(--tab-active-zh); } #btn-en { background: var(--tab-active-en); }
+        .lang-btn.active { opacity: 1; box-shadow: 0 4px 0 rgba(0,0,0,0.1); transform: translateY(-2px); }
+        .passage-area { background: var(--passage-bg); padding: 25px; border-radius: 15px; border: 2px dashed var(--border); line-height: 2.2; font-size: 1.2rem; margin-bottom: 20px; position: relative; }
+        .tts-btn { background: #fff; border: 2px solid var(--accent); color: var(--accent); padding: 5px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; }
+        .tts-btn:hover { background: var(--accent); color: white; }
+        
+        .question-box { background: #f8f9fa; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #eee; }
+        .quiz-item { margin-bottom: 15px; border-bottom: 1px dashed #ccc; padding-bottom: 15px; }
+        .quiz-item:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+        .input-group { display: flex; gap: 10px; margin-top: 10px; }
+        .input-group input { flex: 1; padding: 12px; border: 2px solid var(--border); border-radius: 10px; font-size: 1rem; outline: none; }
+        .input-group button { padding: 12px 25px; background: var(--title-bg); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        
+        .score-card { background: #e8f5e9; border: 2px solid var(--success); border-radius: 15px; padding: 20px; margin-top: 15px; }
+        .score-correct-text { background: #fff; padding: 10px; border-radius: 10px; margin-bottom: 10px; font-size: 0.9rem; color: #555; }
+        .score-recognized-text { margin: 0 0 15px 0; font-size: 1.1rem; color: #2d3436; border-bottom: 2px dashed #ccc; padding-bottom:10px; font-weight:bold;}
+        .score-header { text-align: center; font-weight: bold; margin-bottom: 15px; color: var(--success); }
+        .score-header span { font-size: 3rem; font-weight: 900; }
+        .score-grid { display: flex; justify-content: space-around; text-align: center; }
+        .score-item { font-size: 0.9rem; font-weight: bold; color: #555;}
+        .score-item span { display: block; font-size: 1.8rem; color: var(--title-bg); font-weight: 900; margin-top: 5px;}
+        
+        .mic-section { margin-top: 20px; text-align: center; padding-top: 20px; border-top: 2px dashed #eee; }
+        .mic-start-btn { width: 100%; padding: 15px; border-radius: 50px; border: none; background: #00d2d3; color: white; cursor: pointer; font-size: 1.1rem; font-weight: bold; box-shadow: 0 4px 0 #01a3a4; margin-bottom: 10px;}
+        .mic-start-btn.recording { background: var(--danger); box-shadow: 0 4px 0 #c0392b; }
+        .mic-start-btn.processing { background: #f39c12; box-shadow: 0 4px 0 #d68910; }
+        .ai-advice-box { margin-top: 15px; background: #f0f7ff; padding: 20px; border-radius: 15px; text-align: left; border-left: 6px solid var(--accent); line-height: 1.6; }
+        
+        .vocab-list { display: flex; flex-direction: column; gap: 20px; }
+        .vocab-card { border: 2px solid var(--border); border-radius: 15px; padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #fff; margin-bottom: 20px;}
+        .vocab-top { display: flex; align-items: center; gap: 15px; }
+        .vocab-inputs { flex: 1; display: grid; gap: 12px; }
+        .vocab-row { display: flex; gap: 8px; align-items: flex-start; }
+        .vocab-row input { width: 100%; padding: 10px; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; }
+        .hint-btn { background: #f1f2f6; color: #576574; border: none; border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 0.8rem; font-weight: bold;}
+        .check-btn { background: var(--title-bg); color: white; border: none; border-radius: 8px; padding: 10px 15px; cursor: pointer; font-weight: bold; height: 42px;}
+        .vocab-result { background: #fafafa; border-radius: 10px; padding: 15px; border-left: 4px solid var(--success); display: flex; flex-direction: column; gap: 10px;}
+        
+        #please-login-view { text-align: center; margin-top: 50px; background: var(--card); padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(255,143,171,0.15); max-width: 500px; margin-left: auto; margin-right: auto; }
+        .back-btn { padding:10px 20px; border-radius:20px; border:none; background:#fff; font-weight:bold; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; display: inline-block; }
+        .back-btn:hover { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+
+    <div class="login-header">
+        <div data-netlify-identity-menu></div>
+    </div>
+
+    <div id="please-login-view">
+        <h2>🔒 ログインしてください</h2>
+        <p style="color: var(--muted); margin-bottom: 20px;">右上のボタンからログインが必要です。</p>
+    </div>
+
+    <div id="level-selection-view" class="hidden">
+        <h1>🌱 3Lang としょかん - レベルをえらぼう</h1>
+        <div class="library-grid" id="level-list"></div>
+    </div>
+
+    <div id="library-view" class="hidden">
+        <button class="back-btn" onclick="showLevelSelection()">← レベルえらびに もどる</button>
+        <h1 id="library-title">🌱 としょかん</h1>
+        <div class="library-grid" id="book-list"></div>
+    </div>
+
+    <div id="study-view" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <button class="back-btn" onclick="showLibrary()" style="margin-bottom:0;">← ほんだなに もどる</button>
+            <select id="global-tts-rate" style="padding:8px; border-radius:10px; border:2px solid var(--border);">
+                <option value="0.8">0.8x</option>
+                <option value="1.0" selected>1.0x</option>
+                <option value="1.2">1.2x</option>
+            </select>
+        </div>
+        
+        <div class="container">
+            <h2 id="book-title" style="text-align: center; color: var(--title-bg);"></h2>
+            <div class="tabs">
+                <button class="tab-btn active" id="tab-read" onclick="switchMode('read')">📖 よむ</button>
+                <button class="tab-btn" id="tab-vocab" onclick="switchMode('vocab')">📝 たんご</button>
+            </div>
+
+            <div id="mode-read">
+                <div class="lang-tabs">
+                    <button id="btn-ja" class="lang-btn active" onclick="setLang('ja')">日本語</button>
+                    <button id="btn-zh" class="lang-btn" onclick="setLang('zh')">中国語</button>
+                    <button id="btn-en" class="lang-btn" onclick="setLang('en')">English</button>
+                </div>
+                <div class="passage-area">
+                    <div style="text-align: right;"><button class="tts-btn" onclick="playPassageTTS()">🔊 聞く</button></div>
+                    <div id="passage-text"></div>
+                </div>
+                
+                <div class="question-box" id="quiz-container">
+                    </div>
+
+                <div class="mic-section">
+                    <button id="main-mic-btn" class="mic-start-btn" onclick="toggleDynamicMic('main')">🎤 はつおんテスト</button>
+                    <div id="main-score-area"></div>
+                    <div id="main-advice-area" class="ai-advice-box hidden"></div>
+                </div>
+            </div>
+
+            <div id="mode-vocab" class="hidden">
+                <div id="vocab-container" class="vocab-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let booksData = []; 
+        let currentBook = null;
+        let currentLevel = null;
+        let currentLang = 'ja';
+        let currentMode = 'read';
+        let isRecording = false;
+        let quizMistakes = { 1: 0, 2: 0, 3: 0 }; 
+
+        const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbzwJhremvY0Rl5Bm3yrpQEdlXvQ2ZPVd0wh_TJhdRz0_Iqc0vevawkS6FLUpF76jaN2/exec";
+
+        const levels = [
+            { id: 1, name: "Level 1", grade: "1年生", icon: "🐣" },
+            { id: 2, name: "Level 2", grade: "2年生", icon: "🐥" },
+            { id: 3, name: "Level 3", grade: "3年生", icon: "🎒" },
+            { id: 4, name: "Level 4", grade: "4年生", icon: "📚" },
+            { id: 5, name: "Level 5", grade: "5年生", icon: "🔬" },
+            { id: 6, name: "Level 6", grade: "6年生", icon: "🎓" }
+        ];
+
+        let activeRecognizer = null;
+        let activeMicId = null;
+        let activeFinalResult = null;
+        let activeRecognizedText = "";
+        let activeReferenceText = "";
+
+        function forceStopMic() {
+            if(activeRecognizer) {
+                try { activeRecognizer.stopContinuousRecognitionAsync(); activeRecognizer.close(); } catch(e){}
+                activeRecognizer = null;
+            }
+            isRecording = false;
+            activeMicId = null;
+            
+            document.querySelectorAll('.mic-start-btn').forEach(btn => {
+                btn.className = "mic-start-btn";
+                if (btn.id === 'main-mic-btn') {
+                    btn.innerText = "🎤 はつおんテスト";
+                } else {
+                    btn.innerText = "🎤 再テスト";
+                }
+            });
+            const mainScore = document.getElementById('main-score-area');
+            const mainAdvice = document.getElementById('main-advice-area');
+            if(mainScore) mainScore.innerHTML = "";
+            if(mainAdvice) { mainAdvice.innerHTML = ""; mainAdvice.classList.add('hidden'); }
+        }
+
+        window.onload = () => {
+            if (window.netlifyIdentity) {
+                window.netlifyIdentity.on("init", user => checkLoginStatus(user));
+                window.netlifyIdentity.on("login", user => { checkLoginStatus(user); window.netlifyIdentity.close(); });
+                window.netlifyIdentity.on("logout", () => checkLoginStatus(null));
+            }
+        };
+
+        async function checkLoginStatus(user) {
+            try {
+                if (user) {
+                    document.getElementById('please-login-view').classList.add('hidden');
+                    document.getElementById('level-selection-view').classList.remove('hidden');
+                    
+                    if (booksData.length === 0) {
+                        document.getElementById('level-list').innerHTML = "<h3 style='grid-column: 1 / -1; text-align:center;'>📚 データを読み込み中...</h3>";
+                        const res = await fetch(SPREADSHEET_API_URL);
+                        const rawData = await res.json();
+                        
+                        const validData = rawData.filter(row => row.titleJa && String(row.titleJa).trim() !== "");
+
+                        booksData = validData.map(row => ({
+                            grade: row.grade, category: row.category, title: row.titleJa, icon: '📖',
+                            ja: { passage: row.textJaRuby, rawPassage: row.textJaPlain },
+                            zh: { passage: row.textZhPinyin, rawPassage: row.textZhPinyin },
+                            en: { passage: row.textEn, rawPassage: row.textEn },
+                            vocab: row.words || [],
+                            q1: { ja: row.q1_ja || row.q1 || "", zh: row.q1_zh || row.q1 || "", en: row.q1_en || row.q1 || "" },
+                            a1: { ja: row.a1_ja || row.a1 || "", zh: row.a1_zh || row.a1 || "", en: row.a1_en || row.a1 || "" },
+                            h1: { ja: row.h1_ja || row.h1 || "", zh: row.h1_zh || row.h1 || "", en: row.h1_en || row.h1 || "" },
+                            q2: { ja: row.q2_ja || row.q2 || "", zh: row.q2_zh || row.q2 || "", en: row.q2_en || row.q2 || "" },
+                            a2: { ja: row.a2_ja || row.a2 || "", zh: row.a2_zh || row.a2 || "", en: row.a2_en || row.a2 || "" },
+                            h2: { ja: row.h2_ja || row.h2 || "", zh: row.h2_zh || row.h2 || "", en: row.h2_en || row.h2 || "" },
+                            q3: { ja: row.q3_ja || row.q3 || "", zh: row.q3_zh || row.q3 || "", en: row.q3_en || row.q3 || "" },
+                            a3: { ja: row.a3_ja || row.a3 || "", zh: row.a3_zh || row.a3 || "", en: row.a3_en || row.a3 || "" },
+                            h3: { ja: row.h3_ja || row.h3 || "", zh: row.h3_zh || row.h3 || "", en: row.h3_en || row.h3 || "" }
+                        }));
+                        renderLevelCards(); 
+                    } else { renderLevelCards(); }
+                } else {
+                    hideAllViews();
+                    document.getElementById('please-login-view').classList.remove('hidden');
+                }
+            } catch (err) {
+                document.getElementById('level-list').innerHTML = `<h3 style='grid-column: 1 / -1; color:red; text-align:center;'>読み込みエラー: ${err.message}</h3>`;
+            }
+        }
+
+        function hideAllViews() {
+            ['please-login-view', 'level-selection-view', 'library-view', 'study-view'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+            try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch(e) {}
+            try { forceStopMic(); } catch(e) {}
+        }
+
+        function showLevelSelection() { hideAllViews(); document.getElementById('level-selection-view').classList.remove('hidden'); renderLevelCards(); }
+        function showLibrary() { hideAllViews(); document.getElementById('library-view').classList.remove('hidden'); }
+
+        function renderLevelCards() {
+            const list = document.getElementById('level-list');
+            list.innerHTML = "";
+            levels.forEach(lvl => {
+                const card = document.createElement('div');
+                card.className = 'book-card level-card';
+                card.innerHTML = `<span class="book-icon">${lvl.icon}</span><div style="font-weight:bold; font-size:1.2rem;">${lvl.name}</div><div style="font-size:0.9rem; color:var(--muted); margin-top:5px;">${lvl.grade}</div>`;
+                card.onclick = () => openLibraryForLevel(lvl);
+                list.appendChild(card);
+            });
+        }
+
+        function openLibraryForLevel(lvl) {
+            currentLevel = lvl;
+            hideAllViews();
+            document.getElementById('library-view').classList.remove('hidden');
+            document.getElementById('library-title').innerText = `🌱 ${lvl.name} の としょかん`;
+
+            const targetId = String(lvl.id);
+            const fullWidthTarget = String.fromCharCode(targetId.charCodeAt(0) + 0xFEE0);
+            const filteredBooks = booksData.filter(book => book && book.grade && (String(book.grade).includes(targetId) || String(book.grade).includes(fullWidthTarget)));
+            
+            const list = document.getElementById('book-list');
+            list.innerHTML = "";
+            if (filteredBooks.length === 0) {
+                list.innerHTML = `<p style='grid-column: 1 / -1; text-align:center; padding:40px; font-weight:bold;'>まだ お話が ありません。</p>`;
+                return;
+            }
+
+            filteredBooks.forEach(book => {
+                const card = document.createElement('div');
+                card.className = 'book-card';
+                card.innerHTML = `<span class="book-icon">${book.icon || '📖'}</span><div style="font-size:0.8rem; color:var(--muted); margin-bottom:5px;">[${book.category || '未分類'}]</div><div style="font-weight:bold; line-height:1.4;">${book.title || 'タイトルなし'}</div>`;
+                card.onclick = () => { currentBook = book; startStudy(); };
+                list.appendChild(card);
+            });
+        }
+
+        function startStudy() {
+            document.getElementById('book-title').innerText = currentBook.title;
+            hideAllViews();
+            document.getElementById('study-view').classList.remove('hidden');
+            setLang('ja');
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.getElementById('tab-read').classList.toggle('active', mode === 'read');
+            document.getElementById('tab-vocab').classList.toggle('active', mode === 'vocab');
+            document.getElementById('mode-read').classList.toggle('hidden', mode !== 'read');
+            document.getElementById('mode-vocab').classList.toggle('hidden', mode !== 'vocab');
+            if(mode === 'vocab') renderVocab();
+        }
+
+        function setLang(lang) {
+            currentLang = lang;
+            quizMistakes = { 1: 0, 2: 0, 3: 0 }; 
+            ['ja', 'zh', 'en'].forEach(l => document.getElementById(`btn-${l}`).classList.toggle('active', l === lang));
+            document.getElementById('passage-text').innerHTML = currentBook[lang].passage;
+            renderQuizzes(lang);
+        }
+
+        function renderQuizzes(lang) {
+            const container = document.getElementById('quiz-container');
+            if (!currentBook) return;
+
+            const uiTexts = {
+                ja: { title: "🎯 クイズにちょうせん！", q: "Q", hint: "💡ヒント:", placeholder: "こたえを入力...", btn: "判定" },
+                zh: { title: "🎯 挑战测验！", q: "问", hint: "💡提示:", placeholder: "输入答案...", btn: "检查" },
+                en: { title: "🎯 Quiz Time!", q: "Q", hint: "💡Hint:", placeholder: "Type your answer...", btn: "Check" }
+            };
+            const ui = uiTexts[lang] || uiTexts.ja;
+
+            container.innerHTML = `<h3 style='margin-top:0; color:var(--title-bg);'>${ui.title}</h3>`;
+            
+            const createQ = (qNum, qObj, aObj, hObj) => {
+                if (!qObj[lang]) return "";
+                return `
+                    <div class="quiz-item">
+                        <p style="font-weight:bold; margin: 0 0 5px 0;">${ui.q}${qNum}: ${qObj[lang]}</p>
+                        <p style="font-size: 0.85em; color: var(--muted); margin: 0 0 10px 0;">${ui.hint} ${hObj[lang]}</p>
+                        <div class="input-group">
+                            <input type="text" id="ans-${qNum}" placeholder="${ui.placeholder}">
+                            <button onclick="checkQuizAnswer(${qNum}, '${(aObj[lang]||'').replace(/'/g, "\\'")}', '${lang}')">${ui.btn}</button>
+                        </div>
+                        <div id="res-${qNum}" style="margin-top:10px; font-weight:bold;"></div>
+                    </div>
+                `;
+            };
+            
+            container.innerHTML += createQ(1, currentBook.q1, currentBook.a1, currentBook.h1);
+            container.innerHTML += createQ(2, currentBook.q2, currentBook.a2, currentBook.h2);
+            container.innerHTML += createQ(3, currentBook.q3, currentBook.a3, currentBook.h3);
+        }
+
+        window.checkQuizAnswer = function(qNum, correct, lang) {
+            const input = document.getElementById(`ans-${qNum}`).value.trim();
+            const res = document.getElementById(`res-${qNum}`);
+            const cleanCorrect = correct.replace(/（[^）]*）|\([^)]*\)/g, '').trim();
+            
+            const msgs = {
+                ja: { success: "🌟 大せいかい！ すごいね！", fail: "❌ おしい！", show: "❌ 3回間違えました。正解は「{ans}」です。" },
+                zh: { success: "🌟 回答正确！太棒了！", fail: "❌ 差不多！", show: "❌ 错了3次。正确答案是「{ans}」。" },
+                en: { success: "🌟 Correct! Great job!", fail: "❌ Almost!", show: "❌ 3 mistakes. The answer is '{ans}'." }
+            };
+            const msg = msgs[lang] || msgs.ja;
+            
+            if (input === cleanCorrect || input === correct) {
+                res.innerHTML = `<span style='color:var(--success);'>${msg.success}</span>`;
+                quizMistakes[qNum] = 0;
+            } else {
+                quizMistakes[qNum]++;
+                if (quizMistakes[qNum] >= 3) {
+                    res.innerHTML = `<span style='color:var(--danger); font-weight:bold;'>${msg.show.replace('{ans}', correct)}</span>`;
+                } else {
+                    res.innerHTML = `<span style='color:var(--danger);'>${msg.fail} (${quizMistakes[qNum]}/3)</span>`;
+                }
+            }
+        };
+
+        let currentPlayingText = "";
+        function playPassageTTS() {
+            if(!currentBook) return;
+            const text = currentBook[currentLang].rawPassage.replace(/<[^>]*>?/gm, '').trim();
+            if(text) playTTS(text, currentLang);
+        }
+
+        function playTTS(text, lang) {
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                if (currentPlayingText === text) { currentPlayingText = ""; return; }
+            }
+            currentPlayingText = text;
+            const ut = new SpeechSynthesisUtterance(text);
+            ut.lang = lang === 'ja' ? 'ja-JP' : (lang === 'zh' ? 'zh-CN' : 'en-US');
+            ut.rate = parseFloat(document.getElementById('global-tts-rate').value);
+            ut.onend = () => { currentPlayingText = ""; };
+            setTimeout(() => { window.speechSynthesis.speak(ut); }, 50);
+        }
+
+        function toggleHint(inputId, hintText) {
+            const el = document.getElementById(inputId);
+            el.placeholder = el.placeholder === hintText ? "単語を入力..." : hintText;
+        }
+
+        function checkVocab(id, targetWord, lang) {
+            const resBox = document.getElementById(`res-${lang}-${id}`);
+            const input = document.getElementById(`in-${lang}-${id}`);
+            if (!resBox.classList.contains('hidden')) { resBox.classList.add('hidden'); return; }
+
+            if(input.value.trim() === targetWord) {
+                input.style.background = "#d1ffd1"; input.style.borderColor = "var(--success)";
+            } else {
+                input.style.background = "#ffd1d1"; input.style.borderColor = "var(--danger)";
+            }
+            resBox.classList.remove('hidden'); 
+        }
+
+        function renderVocab() {
+            const container = document.getElementById('vocab-container');
+            container.innerHTML = "";
+            if(!currentBook.vocab || currentBook.vocab.length === 0) {
+                container.innerHTML = "<p style='text-align:center; color:var(--muted); font-weight:bold;'>このお話には単語カードがありません。</p>";
+                return;
+            }
+            currentBook.vocab.forEach((v, idx) => {
+                const cardId = `word-${idx}`;
+                const card = document.createElement('div');
+                card.className = 'vocab-card';
+                card.innerHTML = `
+                    <div class="vocab-top">
+                        <div style="font-size:50px; text-align:center; min-width: 60px;">${v.icon || '✨'}</div>
+                        <div class="vocab-inputs">
+                            ${createVocabRow(v, 'ja', '🇯🇵', cardId)}
+                            ${createVocabRow(v, 'zh', '🇨🇳', cardId)}
+                            ${createVocabRow(v, 'en', '🇺🇸', cardId)}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function createVocabRow(v, lang, flag, cardId) {
+            const targetWord = lang === 'ja' ? v.ja : (lang === 'zh' ? (v.zh || v.zh_pinyin) : v.en);
+            const hintText = lang === 'ja' ? v.ja : (lang === 'zh' ? v.zh_pinyin : "English");
+            
+            return `
+                <div class="vocab-row">
+                    <span style="font-size:1.2rem; margin-top:10px;">${flag}</span> 
+                    <button class="tts-btn" style="padding:5px; margin-top:8px;" onclick="playTTS('${targetWord}', '${lang}')">🔊</button>
+                    <button class="hint-btn" style="margin-top:10px;" onclick="toggleHint('in-${lang}-${cardId}', '${hintText}')">ヒント</button>
+                    <div style="flex:1; display:flex; flex-direction:column;">
+                        <input type="text" id="in-${lang}-${cardId}" placeholder="単語を入力..." onkeypress="if(event.key === 'Enter') checkVocab('${cardId}', '${targetWord}', '${lang}')">
+                        ${lang === 'zh' ? `<small style="color:var(--muted); margin-top:3px; padding-left:5px; font-weight:bold;">ピンイン: ${v.zh_pinyin}</small>` : ''}
+                    </div>
+                    <button class="check-btn" style="margin-top:2px;" onclick="checkVocab('${cardId}', '${targetWord}', '${lang}')">かくにん</button>
+                </div>
+                <div id="res-${lang}-${cardId}" class="vocab-result hidden">
+                    <div style="font-weight:bold;">正解: <span style="color:var(--accent); font-size:1.2rem;">${targetWord}</span></div>
+                    <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
+                        <button id="btn-word-${lang}-${cardId}" class="mic-start-btn" style="margin:0; padding:8px 15px; font-size:0.9rem;" onclick="toggleDynamicMic('word-${lang}-${cardId}', '${targetWord}', '${lang}')">🎤 単語をはつおん</button>
+                    </div>
+                    <div id="word-${lang}-${cardId}-score-area"></div>
+                    <div id="word-${lang}-${cardId}-advice-area" class="ai-advice-box hidden"></div>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        //  スピーキングテスト関連処理（Azure & Gemini）
+        // ==========================================
+        async function toggleDynamicMic(contextId, customText = null, customLang = null) {
+            const btnId = contextId === 'main' ? 'main-mic-btn' : `btn-${contextId}`;
+            const btn = document.getElementById(btnId);
+
+            if (isRecording) {
+                if (activeMicId === contextId) { stopMic(contextId); return; } 
+                else { forceStopMic(); }
+            }
+
+            isRecording = true; activeMicId = contextId;
+            activeFinalResult = null; activeRecognizedText = "";
+
+            const targetLangCode = customLang || currentLang;
+            activeReferenceText = (customText || currentBook[currentLang].rawPassage || "").replace(/<[^>]*>?/gm, '').trim();
+            if (!activeReferenceText) {
+                document.getElementById(`${contextId}-score-area`).innerHTML = "<div style='color:red;'>読み上げる文章がありません。</div>";
+                isRecording = false; return;
+            }
+
+            let azureLang = targetLangCode === 'ja' ? 'ja-JP' : (targetLangCode === 'zh' ? 'zh-CN' : 'en-US');
+
+            btn.className = "mic-start-btn recording"; btn.innerText = "⏹️ 停止して採点";
+            document.getElementById(`${contextId}-score-area`).innerHTML = "⏳ じゅんびちゅう...";
+            if(document.getElementById(`${contextId}-advice-area`)) document.getElementById(`${contextId}-advice-area`).classList.add('hidden');
+
+            try {
+                const res = await fetch('/.netlify/functions/api', { method: 'POST', body: JSON.stringify({ service: 'azure-token' }) });
+                // ★ 404エラー（関数が見つからない）場合のエラー処理
+                if (!res.ok) {
+                    throw new Error("Netlify Functions が見つかりません。APIファイルが正しくアップロードされているか確認してください。");
+                }
+                const tokenData = await res.json();
+                if(tokenData.error) throw new Error(tokenData.error);
+                
+                const speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(tokenData.token, tokenData.region);
+                speechConfig.speechRecognitionLanguage = azureLang;
+                const pronConfig = new SpeechSDK.PronunciationAssessmentConfig(activeReferenceText, SpeechSDK.PronunciationAssessmentGradingSystem.HundredMark, SpeechSDK.PronunciationAssessmentGranularity.Phoneme, true);
+                
+                activeRecognizer = new SpeechSDK.SpeechRecognizer(speechConfig, SpeechSDK.AudioConfig.fromDefaultMicrophoneInput());
+                pronConfig.applyTo(activeRecognizer);
+                
+                activeRecognizer.recognized = (s, e) => {
+                    if (e.result.reason === SpeechSDK.ResultReason.RecognizedSpeech) {
+                        activeFinalResult = SpeechSDK.PronunciationAssessmentResult.fromResult(e.result);
+                        activeRecognizedText += e.result.text + " ";
+                    }
+                };
+                
+                document.getElementById(`${contextId}-score-area`).innerHTML = "🎤 きいているよ... 大きな声で読んでね！";
+                activeRecognizer.startContinuousRecognitionAsync();
+            } catch (e) { 
+                console.error(e);
+                document.getElementById(`${contextId}-score-area`).innerHTML = `<div style='color:red;'>${e.message || "エラーが発生しました。"}</div>`;
+                isRecording = false; btn.className = "mic-start-btn"; btn.innerText = "🎤 再テスト"; 
+            }
+        }
+
+        function stopMic(contextId) {
+            const btnId = contextId === 'main' ? 'main-mic-btn' : `btn-${contextId}`;
+            const btn = document.getElementById(btnId);
+            btn.className = "mic-start-btn processing"; btn.innerText = "⏳ けいさんちゅう...";
+
+            setTimeout(() => {
+                if (activeRecognizer) {
+                    activeRecognizer.stopContinuousRecognitionAsync(() => {
+                        activeRecognizer.close(); activeRecognizer = null; isRecording = false; activeMicId = null;
+                        btn.className = "mic-start-btn"; 
+                        btn.innerText = contextId === 'main' ? "🎤 はつおんテスト" : "🎤 再テスト";
+
+                        if (activeFinalResult && activeRecognizedText.trim() !== "") {
+                            drawScore(contextId, activeFinalResult, activeRecognizedText, activeReferenceText);
+                            requestGemini(contextId, activeFinalResult, activeRecognizedText, activeReferenceText);
+                        } else {
+                            document.getElementById(`${contextId}-score-area`).innerHTML = "<div style='color:red;'>うまくききとれませんでした。</div>";
+                        }
+                    });
+                }
+            }, 1500); 
+        }
+
+        function drawScore(contextId, pronResult, recognizedText, correctText) {
+            const scoreDiv = document.getElementById(`${contextId}-score-area`);
+            const total = Math.round(pronResult.pronunciationScore) || 0;
+            const accuracy = Math.round(pronResult.accuracyScore) || 0;
+            const fluency = Math.round(pronResult.fluencyScore) || 0;
+            const completeness = Math.round(pronResult.completenessScore) || 0;
+
+            scoreDiv.innerHTML = `
+                <div class="score-card">
+                    <div class="score-correct-text"><strong>お手本：</strong> ${correctText}</div>
+                    <div class="score-recognized-text"><strong>ききとった言葉：</strong><br>${recognizedText}</div>
+                    <div class="score-header">総合スコア<br><span>${total}</span></div>
+                    <div class="score-grid">
+                        <div class="score-item">発音<span>${total}</span></div>
+                        <div class="score-item">正確さ<span>${accuracy}</span></div>
+                        <div class="score-item">流暢さ<span>${fluency}</span></div>
+                        <div class="score-item">完全性<span>${completeness}</span></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function requestGemini(contextId, pronResult, recognizedText, refText) {
+            const adviceDiv = document.getElementById(`${contextId}-advice-area`);
+            if(!adviceDiv) return;
+            adviceDiv.classList.remove('hidden'); adviceDiv.innerHTML = "🤖 先生が かんがえちゅう...";
+            
+            const targetLangCode = contextId.includes('-zh-') ? 'zh' : (contextId.includes('-en-') ? 'en' : currentLang);
+            const promptText = `あなたは優しい小学校の先生です。以下の音声認識データをもとに、子供向けの発音アドバイスを日本語で100文字程度でしてください。対象言語: ${targetLangCode} / 読もうとした文章: ${refText} / 認識された音声: ${recognizedText} / 発音スコア: ${pronResult.pronunciationScore}`;
+            
+            try {
+                const response = await fetch('/.netlify/functions/api', {
+                    method: "POST",
+                    body: JSON.stringify({ service: 'gemini', data: { contents: [{ parts: [{ text: promptText }] }] } })
+                });
+                const data = await response.json();
+                adviceDiv.innerHTML = `<strong>👩‍🏫 先生からのアドバイス：</strong><br>${data.candidates[0].content.parts[0].text}`;
+            } catch (e) { adviceDiv.innerHTML = "AI先生はお休み中です。"; }
+        }
+    </script>
+</body>
+</html>
