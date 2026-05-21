@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3Lang 図書館 (完成版)</title>
+    <title>3Lang 図書館 (完�E牁E</title>
     <script src="https://aka.ms/csspeech/jsbrowserpackageraw"></script>
     <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
@@ -98,23 +98,23 @@
 
     <div id="please-login-view">
         <h2>🔒 ログインしてください</h2>
-        <p style="color: var(--muted); margin-bottom: 20px;">右上のボタンからログインが必要です。</p>
+        <p style="color: var(--muted); margin-bottom: 20px;">右上�Eボタンからログインが忁E��です、E/p>
     </div>
 
     <div id="level-selection-view" class="hidden">
-        <h1>🌱 3Lang としょかん - レベルをえらぼう</h1>
+        <h1>🌱 3Lang としょかん - レベルをえらぼぁE/h1>
         <div class="library-grid" id="level-list"></div>
     </div>
 
     <div id="library-view" class="hidden">
-        <button class="back-btn" onclick="showLevelSelection()">← レベルえらびに もどる</button>
+        <button class="back-btn" onclick="showLevelSelection()">ↁEレベルえらびに もどめE/button>
         <h1 id="library-title">🌱 としょかん</h1>
         <div class="library-grid" id="book-list"></div>
     </div>
 
     <div id="study-view" class="hidden">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <button class="back-btn" onclick="showLibrary()" style="margin-bottom:0;">← ほんだなに もどる</button>
+            <button class="back-btn" onclick="showLibrary()" style="margin-bottom:0;">ↁEほんだなに もどめE/button>
             <select id="global-tts-rate" style="padding:8px; border-radius:10px; border:2px solid var(--border);">
                 <option value="0.8">0.8x</option>
                 <option value="1.0" selected>1.0x</option>
@@ -125,14 +125,14 @@
         <div class="container">
             <h2 id="book-title" style="text-align: center; color: var(--title-bg);"></h2>
             <div class="tabs">
-                <button class="tab-btn active" id="tab-read" onclick="switchMode('read')">📖 よむ</button>
-                <button class="tab-btn" id="tab-vocab" onclick="switchMode('vocab')">📝 たんご</button>
+                <button class="tab-btn active" id="tab-read" onclick="switchMode('read')">📖 よ�E</button>
+                <button class="tab-btn" id="tab-vocab" onclick="switchMode('vocab')">📝 たんぁE/button>
             </div>
 
             <div id="mode-read">
                 <div class="lang-tabs">
-                    <button id="btn-ja" class="lang-btn active" onclick="setLang('ja')">日本語</button>
-                    <button id="btn-zh" class="lang-btn" onclick="setLang('zh')">中国語</button>
+                    <button id="btn-ja" class="lang-btn active" onclick="setLang('ja')">日本誁E/button>
+                    <button id="btn-zh" class="lang-btn" onclick="setLang('zh')">中国誁E/button>
                     <button id="btn-en" class="lang-btn" onclick="setLang('en')">English</button>
                 </div>
                 <div class="passage-area">
@@ -143,7 +143,7 @@
                 <div class="question-box" id="quiz-container"></div>
 
                 <div class="mic-section">
-                    <button id="main-mic-btn" class="mic-start-btn" onclick="toggleDynamicMic('main')">🎤 はつおんテスト</button>
+                    <button id="main-mic-btn" class="mic-start-btn" onclick="toggleDynamicMic('main')">🎤 はつおんチE��チE/button>
                     <div id="main-score-area"></div>
                     <div id="main-advice-area" class="ai-advice-box hidden"></div>
                 </div>
@@ -164,15 +164,15 @@
         let isRecording = false;
         window.quizMistakes = {}; // ミスカウント用グローバル変数
 
-        const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbzwJhremvY0Rl5Bm3yrpQEdlXvQ2ZPVd0wh_TJhdRz0_Iqc0vevawkS6FLUpF76jaN2/exec";
+        const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwcFerv_iV0HfB_5J7Swm0cd3AjWDuydsCVTRg7A2uVesMhsRAHFGbTltUNWOIE8jy2/exec";
 
         const levels = [
-            { id: 1, name: "Level 1", grade: "1年生", icon: "🐣" },
-            { id: 2, name: "Level 2", grade: "2年生", icon: "🐥" },
-            { id: 3, name: "Level 3", grade: "3年生", icon: "🎒" },
-            { id: 4, name: "Level 4", grade: "4年生", icon: "📚" },
-            { id: 5, name: "Level 5", grade: "5年生", icon: "🔬" },
-            { id: 6, name: "Level 6", grade: "6年生", icon: "🎓" }
+            { id: 1, name: "Level 1", grade: "1年甁E, icon: "🐣" },
+            { id: 2, name: "Level 2", grade: "2年甁E, icon: "🐥" },
+            { id: 3, name: "Level 3", grade: "3年甁E, icon: "🎒" },
+            { id: 4, name: "Level 4", grade: "4年甁E, icon: "📚" },
+            { id: 5, name: "Level 5", grade: "5年甁E, icon: "🔬" },
+            { id: 6, name: "Level 6", grade: "6年甁E, icon: "🎓" }
         ];
 
         let activeRecognizer = null;
@@ -204,9 +204,9 @@
             document.querySelectorAll('.mic-start-btn').forEach(btn => {
                 btn.className = "mic-start-btn";
                 if (btn.id === 'main-mic-btn') {
-                    btn.innerText = "🎤 はつおんテスト";
+                    btn.innerText = "🎤 はつおんチE��チE;
                 } else {
-                    btn.innerText = "🎤 再テスト";
+                    btn.innerText = "🎤 再テスチE;
                 }
             });
             const mainScore = document.getElementById('main-score-area');
@@ -230,7 +230,7 @@
                     document.getElementById('level-selection-view').classList.remove('hidden');
                     
                     if (booksData.length === 0) {
-                        document.getElementById('level-list').innerHTML = "<h3 style='grid-column: 1 / -1; text-align:center;'>📚 データを読み込み中...</h3>";
+                        document.getElementById('level-list').innerHTML = "<h3 style='grid-column: 1 / -1; text-align:center;'>📚 チE�Eタを読み込み中...</h3>";
                         const res = await fetch(SPREADSHEET_API_URL + "?t=" + new Date().getTime(), {
                             cache: "no-store",
                             headers: {
@@ -316,14 +316,14 @@
             const list = document.getElementById('book-list');
             list.innerHTML = "";
             if (filteredBooks.length === 0) {
-                list.innerHTML = `<p style='grid-column: 1 / -1; text-align:center; padding:40px; font-weight:bold;'>まだ お話が ありません。</p>`;
+                list.innerHTML = `<p style='grid-column: 1 / -1; text-align:center; padding:40px; font-weight:bold;'>まだ お話ぁEありません、E/p>`;
                 return;
             }
 
             filteredBooks.forEach(book => {
                 const card = document.createElement('div');
                 card.className = 'book-card';
-                card.innerHTML = `<span class="book-icon">${book.icon || '📖'}</span><div style="font-size:0.8rem; color:var(--muted); margin-bottom:5px;">[${book.category || '未分類'}]</div><div style="font-weight:bold; line-height:1.4;">${book.title || 'タイトルなし'}</div>`;
+                card.innerHTML = `<span class="book-icon">${book.icon || '📖'}</span><div style="font-size:0.8rem; color:var(--muted); margin-bottom:5px;">[${book.category || '未刁E��E}]</div><div style="font-weight:bold; line-height:1.4;">${book.title || 'タイトルなぁE}</div>`;
                 card.onclick = () => { currentBook = book; startStudy(); };
                 list.appendChild(card);
             });
@@ -356,12 +356,12 @@
             const container = document.getElementById('quiz-container');
             if (!currentBook || !container) return;
 
-            // 切り替え時にミスカウントをリセット
+            // 刁E��替え時にミスカウントをリセチE��
             window.quizMistakes = {};
 
             const uiTexts = {
-                ja: { title: "🎯 クイズにちょうせん！", q: "Q", hint: "💡ヒント:" },
-                zh: { title: "🎯 挑战测验！", q: "问", hint: "💡提示:" },
+                ja: { title: "🎯 クイズにちめE��せん�E�E, q: "Q", hint: "💡ヒンチE" },
+                zh: { title: "🎯 挑�E测验！E, q: "问", hint: "💡提示:" },
                 en: { title: "🎯 Quiz Time!", q: "Q", hint: "💡Hint:" }
             };
             const ui = uiTexts[lang] || uiTexts.ja;
@@ -376,9 +376,8 @@
                     { text: qData.w1, isCorrect: false },
                     { text: qData.w2, isCorrect: false },
                     { text: qData.w3, isCorrect: false }
-                ].filter(c => c.text); // 空の選択肢を除外
-
-                choices.sort(() => Math.random() - 0.5); // シャッフル
+                ].filter(c => c.text); // 空の選択肢を除夁E
+                choices.sort(() => Math.random() - 0.5); // シャチE��ル
 
                 let html = `
                     <div class="quiz-item" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
@@ -400,9 +399,9 @@
             const res = document.getElementById(`res-${qNum}`);
             const btn = document.getElementById(btnId);
             const msgs = {
-                ja: { success: "🌟 大せいかい！", fail: "❌ おしい！", show: "❌ 3回間違えました。正解は「{ans}」です。" },
-                zh: { success: "🌟 回答正确！", fail: "❌ 差不多！", show: "❌ 错了3次。正确答案是「{ans}」。" },
-                en: { success: "🌟 Correct!", fail: "❌ Almost!", show: "❌ 3 mistakes. The answer is '{ans}'." }
+                ja: { success: "🌟 大せいかい�E�E, fail: "❁EおしぁE��E, show: "❁E3回間違えました。正解は「{ans}」です、E },
+                zh: { success: "🌟 回答正确�E�E, fail: "❁E差不多！E, show: "❁E错亁E次。正确答案是「{ans}」、E },
+                en: { success: "🌟 Correct!", fail: "❁EAlmost!", show: "❁E3 mistakes. The answer is '{ans}'." }
             };
             const msg = msgs[lang] || msgs.ja;
 
@@ -443,7 +442,7 @@
 
         function toggleHint(inputId, hintText) {
             const el = document.getElementById(inputId);
-            el.placeholder = el.placeholder === hintText ? "単語を入力..." : hintText;
+            el.placeholder = el.placeholder === hintText ? "単語を入劁E.." : hintText;
         }
 
         function checkVocab(id, targetWord, lang) {
@@ -463,7 +462,7 @@
             const container = document.getElementById('vocab-container');
             container.innerHTML = "";
             if(!currentBook.vocab || currentBook.vocab.length === 0) {
-                container.innerHTML = "<p style='text-align:center; color:var(--muted); font-weight:bold;'>このお話には単語カードがありません。</p>";
+                container.innerHTML = "<p style='text-align:center; color:var(--muted); font-weight:bold;'>こ�Eお話には単語カードがありません、E/p>";
                 return;
             }
             currentBook.vocab.forEach((v, idx) => {
@@ -474,9 +473,9 @@
                     <div class="vocab-top">
                         <div style="font-size:50px; text-align:center; min-width: 60px;">${v.icon || '✨'}</div>
                         <div class="vocab-inputs">
-                            ${createVocabRow(v, 'ja', '🇯🇵', cardId)}
-                            ${createVocabRow(v, 'zh', '🇨🇳', cardId)}
-                            ${createVocabRow(v, 'en', '🇺🇸', cardId)}
+                            ${createVocabRow(v, 'ja', '�E�E', cardId)}
+                            ${createVocabRow(v, 'zh', '�E�E', cardId)}
+                            ${createVocabRow(v, 'en', '�E�E', cardId)}
                         </div>
                     </div>
                 `;
@@ -492,12 +491,12 @@
                 <div class="vocab-row">
                     <span style="font-size:1.2rem; margin-top:10px;">${flag}</span> 
                     <button class="tts-btn" style="padding:5px; margin-top:8px;" onclick="playTTS('${targetWord}', '${lang}')">🔊</button>
-                    <button class="hint-btn" style="margin-top:10px;" onclick="toggleHint('in-${lang}-${cardId}', '${hintText}')">ヒント</button>
+                    <button class="hint-btn" style="margin-top:10px;" onclick="toggleHint('in-${lang}-${cardId}', '${hintText}')">ヒンチE/button>
                     <div style="flex:1; display:flex; flex-direction:column;">
-                        <input type="text" id="in-${lang}-${cardId}" placeholder="単語を入力..." onkeypress="if(event.key === 'Enter') checkVocab('${cardId}', '${targetWord}', '${lang}')">
+                        <input type="text" id="in-${lang}-${cardId}" placeholder="単語を入劁E.." onkeypress="if(event.key === 'Enter') checkVocab('${cardId}', '${targetWord}', '${lang}')">
                         ${lang === 'zh' ? `<small style="color:var(--muted); margin-top:3px; padding-left:5px; font-weight:bold;">ピンイン: ${v.zh_pinyin}</small>` : ''}
                     </div>
-                    <button class="check-btn" style="margin-top:2px;" onclick="checkVocab('${cardId}', '${targetWord}', '${lang}')">かくにん</button>
+                    <button class="check-btn" style="margin-top:2px;" onclick="checkVocab('${cardId}', '${targetWord}', '${lang}')">かくにめE/button>
                 </div>
                 <div id="res-${lang}-${cardId}" class="vocab-result hidden">
                     <div style="font-weight:bold;">正解: <span style="color:var(--accent); font-size:1.2rem;">${targetWord}</span></div>
@@ -511,8 +510,7 @@
         }
 
         // ==========================================
-        //  スピーキングテスト関連処理（Azure & Gemini）
-        // ==========================================
+        //  スピ�EキングチE��ト関連処琁E��Ezure & Gemini�E�E        // ==========================================
         async function toggleDynamicMic(contextId, customText = null, customLang = null) {
             const btnId = contextId === 'main' ? 'main-mic-btn' : `btn-${contextId}`;
             const btn = document.getElementById(btnId);
@@ -528,21 +526,20 @@
             const targetLangCode = customLang || currentLang;
             activeReferenceText = (customText || currentBook[currentLang].rawPassage || "").replace(/<[^>]*>?/gm, '').trim();
             if (!activeReferenceText) {
-                document.getElementById(`${contextId}-score-area`).innerHTML = "<div style='color:red;'>読み上げる文章がありません。</div>";
+                document.getElementById(`${contextId}-score-area`).innerHTML = "<div style='color:red;'>読み上げる文章がありません、E/div>";
                 isRecording = false; return;
             }
 
             let azureLang = targetLangCode === 'ja' ? 'ja-JP' : (targetLangCode === 'zh' ? 'zh-CN' : 'en-US');
 
-            btn.className = "mic-start-btn recording"; btn.innerText = "⏹️ 停止して採点";
-            document.getElementById(`${contextId}-score-area`).innerHTML = "⏳ じゅんびちゅう...";
+            btn.className = "mic-start-btn recording"; btn.innerText = "⏹�E�E停止して採点";
+            document.getElementById(`${contextId}-score-area`).innerHTML = "⏳ じゅん�EちめE��...";
             if(document.getElementById(`${contextId}-advice-area`)) document.getElementById(`${contextId}-advice-area`).classList.add('hidden');
 
             try {
                 const res = await fetch('/.netlify/functions/api', { method: 'POST', body: JSON.stringify({ service: 'azure-token' }) });
-                // ★ 404エラー（関数が見つからない）場合のエラー処理
-                if (!res.ok) {
-                    throw new Error("Netlify Functions が見つかりません。APIファイルが正しくアップロードされているか確認してください。");
+                // ☁E404エラー�E�関数が見つからなぁE��場合�Eエラー処琁E                if (!res.ok) {
+                    throw new Error("Netlify Functions が見つかりません、EPIファイルが正しくアチE�EロードされてぁE��か確認してください、E);
                 }
                 const tokenData = await res.json();
                 if(tokenData.error) throw new Error(tokenData.error);
@@ -561,32 +558,32 @@
                     }
                 };
                 
-                document.getElementById(`${contextId}-score-area`).innerHTML = "🎤 きいているよ... 大きな声で読んでね！";
+                document.getElementById(`${contextId}-score-area`).innerHTML = "🎤 きいてぁE��めE.. 大きな声で読んでね�E�E;
                 activeRecognizer.startContinuousRecognitionAsync();
             } catch (e) { 
                 console.error(e);
-                document.getElementById(`${contextId}-score-area`).innerHTML = `<div style='color:red;'>${e.message || "エラーが発生しました。"}</div>`;
-                isRecording = false; btn.className = "mic-start-btn"; btn.innerText = "🎤 再テスト"; 
+                document.getElementById(`${contextId}-score-area`).innerHTML = `<div style='color:red;'>${e.message || "エラーが発生しました、E}</div>`;
+                isRecording = false; btn.className = "mic-start-btn"; btn.innerText = "🎤 再テスチE; 
             }
         }
 
         function stopMic(contextId) {
             const btnId = contextId === 'main' ? 'main-mic-btn' : `btn-${contextId}`;
             const btn = document.getElementById(btnId);
-            btn.className = "mic-start-btn processing"; btn.innerText = "⏳ けいさんちゅう...";
+            btn.className = "mic-start-btn processing"; btn.innerText = "⏳ けいさんちめE��...";
 
             setTimeout(() => {
                 if (activeRecognizer) {
                     activeRecognizer.stopContinuousRecognitionAsync(() => {
                         activeRecognizer.close(); activeRecognizer = null; isRecording = false; activeMicId = null;
                         btn.className = "mic-start-btn"; 
-                        btn.innerText = contextId === 'main' ? "🎤 はつおんテスト" : "🎤 再テスト";
+                        btn.innerText = contextId === 'main' ? "🎤 はつおんチE��チE : "🎤 再テスチE;
 
                         if (activeFinalResult && activeRecognizedText.trim() !== "") {
                             drawScore(contextId, activeFinalResult, activeRecognizedText, activeReferenceText);
                             requestGemini(contextId, activeFinalResult, activeRecognizedText, activeReferenceText);
                         } else {
-                            document.getElementById(`${contextId}-score-area`).innerHTML = "<div style='color:red;'>うまくききとれませんでした。</div>";
+                            document.getElementById(`${contextId}-score-area`).innerHTML = "<div style='color:red;'>ぁE��くききとれませんでした、E/div>";
                         }
                     });
                 }
@@ -602,14 +599,14 @@
 
             scoreDiv.innerHTML = `
                 <div class="score-card">
-                    <div class="score-correct-text"><strong>お手本：</strong> ${correctText}</div>
-                    <div class="score-recognized-text"><strong>ききとった言葉：</strong><br>${recognizedText}</div>
+                    <div class="score-correct-text"><strong>お手本�E�E/strong> ${correctText}</div>
+                    <div class="score-recognized-text"><strong>ききとった言葉！E/strong><br>${recognizedText}</div>
                     <div class="score-header">総合スコア<br><span>${total}</span></div>
                     <div class="score-grid">
                         <div class="score-item">発音<span>${total}</span></div>
-                        <div class="score-item">正確さ<span>${accuracy}</span></div>
-                        <div class="score-item">流暢さ<span>${fluency}</span></div>
-                        <div class="score-item">完全性<span>${completeness}</span></div>
+                        <div class="score-item">正確ぁEspan>${accuracy}</span></div>
+                        <div class="score-item">流暢ぁEspan>${fluency}</span></div>
+                        <div class="score-item">完�E性<span>${completeness}</span></div>
                     </div>
                 </div>
             `;
@@ -618,10 +615,10 @@
         async function requestGemini(contextId, pronResult, recognizedText, refText) {
             const adviceDiv = document.getElementById(`${contextId}-advice-area`);
             if(!adviceDiv) return;
-            adviceDiv.classList.remove('hidden'); adviceDiv.innerHTML = "🤖 先生が かんがえちゅう...";
+            adviceDiv.classList.remove('hidden'); adviceDiv.innerHTML = "🤁E先生ぁEかんがえちめE��...";
             
             const targetLangCode = contextId.includes('-zh-') ? 'zh' : (contextId.includes('-en-') ? 'en' : currentLang);
-            const promptText = `あなたは優しい小学校の先生です。以下の音声認識データをもとに、子供向けの発音アドバイスを日本語で100文字程度でしてください。対象言語: ${targetLangCode} / 読もうとした文章: ${refText} / 認識された音声: ${recognizedText} / 発音スコア: ${pronResult.pronunciationScore}`;
+            const promptText = `あなた�E優しい小学校の先生です。以下�E音声認識データをもとに、子供向け�E発音アドバイスを日本語で100斁E��程度でしてください。対象言誁E ${targetLangCode} / 読もうとした斁E��: ${refText} / 認識された音声: ${recognizedText} / 発音スコア: ${pronResult.pronunciationScore}`;
             
             try {
                 const response = await fetch('/.netlify/functions/api', {
@@ -629,8 +626,8 @@
                     body: JSON.stringify({ service: 'gemini', data: { contents: [{ parts: [{ text: promptText }] }] } })
                 });
                 const data = await response.json();
-                adviceDiv.innerHTML = `<strong>👩‍🏫 先生からのアドバイス：</strong><br>${data.candidates[0].content.parts[0].text}`;
-            } catch (e) { adviceDiv.innerHTML = "AI先生はお休み中です。"; }
+                adviceDiv.innerHTML = `<strong>👩‍🏫 先生からのアドバイス�E�E/strong><br>${data.candidates[0].content.parts[0].text}`;
+            } catch (e) { adviceDiv.innerHTML = "AI先生はお休み中です、E; }
         }
     </script>
 </body>
