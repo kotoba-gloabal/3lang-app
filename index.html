@@ -206,20 +206,20 @@
         let matchSelection = [];
         let matchMatchedIds = new Set();
 
-        function formatJapaneseRuby(text) {
+        function formatZhRuby(text) {
             if (!text) return "";
-            return text.replace(/([一-龠]+)\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
+            return text.replace(/([\u4E00-\u9FA5]+)\s*[(（]([^)）]+)[)）]/g, '<ruby>$1<rt>$2</rt></ruby>');
         }
 
-        function formatChineseRuby(text) {
+        function formatJaRuby(text) {
             if (!text) return "";
-            return text.replace(/([\u4E00-\u9FA5，。！？、]+)\s*\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
+            return text.replace(/([一-龠ぁ-んァ-ヶ]+)\s*[(（]([^)）]+)[)）]/g, '<ruby>$1<rt>$2</rt></ruby>');
         }
 
         function formatLangContent(text, lang) {
             if (!text) return "";
-            if (lang === 'ja') return formatJapaneseRuby(text);
-            if (lang === 'zh') return formatChineseRuby(text);
+            if (lang === 'ja') return formatJaRuby(text);
+            if (lang === 'zh') return formatZhRuby(text);
             return escapeHtml(text);
         }
 
@@ -309,8 +309,8 @@
 
                         booksData = validData.map(row => ({
                             grade: row.grade, id: row.id, category: row.category, title: row.titleJa, icon: '📖',
-                            ja: { passage: row.textJaRuby || formatJapaneseRuby(row.textJaPlain || ""), rawPassage: row.textJaPlain || row.textJaRuby || "" },
-                            zh: { passage: formatChineseRuby(row.textZhPinyin), rawPassage: row.textZhPinyin },
+                            ja: { passage: row.textJaRuby || formatJaRuby(row.textJaPlain || ""), rawPassage: row.textJaPlain || row.textJaRuby || "" },
+                            zh: { passage: formatZhRuby(row.textZhPinyin), rawPassage: row.textZhPinyin },
                             en: { passage: row.textEn, rawPassage: row.textEn },
                             vocab: typeof row.words === 'string' ? JSON.parse(row.words || "[]") : (row.words || []),
                             q1: {
@@ -614,8 +614,8 @@
 
                 shuffleArray(words).forEach(w => {
                     if (matchMatchedIds.has(w.id)) return;
-                    const label = col.lang === "ja" ? formatJapaneseRuby(w.ja) :
-                        col.lang === "zh" ? formatChineseRuby(w.zh) : escapeHtml(w.en);
+                    const label = col.lang === "ja" ? formatJaRuby(w.ja) :
+                        col.lang === "zh" ? formatZhRuby(w.zh) : escapeHtml(w.en);
                     const ttsText = col.lang === "ja" ? w.jaRaw : col.lang === "zh" ? w.zhRaw : w.enRaw;
                     if (!ttsText) return;
 
