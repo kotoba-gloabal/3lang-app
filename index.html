@@ -181,6 +181,18 @@
         let activeRecognizedText = "";
         let activeReferenceText = "";
 
+        function formatChineseRuby(text) {
+            if (!text) return "";
+            return text.replace(/([\u4E00-\u9FA5]+)\s*\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
+        }
+
+        function stripTextForTTS(text) {
+            return String(text || "")
+                .replace(/<[^>]*>/g, '')
+                .replace(/([\u4E00-\u9FA5]+)\s*\([^)]+\)/g, '$1')
+                .trim();
+        }
+
         function forceStopMic() {
             if(activeRecognizer) {
                 try { activeRecognizer.stopContinuousRecognitionAsync(); activeRecognizer.close(); } catch(e){}
@@ -225,21 +237,15 @@
                         const validData = rawData.filter(row => row.titleJa && String(row.titleJa).trim() !== "");
 
                         booksData = validData.map(row => ({
-                            grade: row.grade || row[0] || "",
-                            id: row.id || row[1] || "",
-                            category: row.category || row[2] || "",
-                            title: row.titleJa || row[4] || "",
+                            grade: row.grade,
+                            id: row.id,
+                            category: row.category,
+                            title: row.titleJa,
                             icon: '📖',
-                            ja: { passage: row.textJaRuby || "", rawPassage: row.textJaPlain || "" },
-                            zh: { passage: row.textZhPinyin || "", rawPassage: row.textZhPinyin || "" },
-                            en: { passage: row.textEn || "", rawPassage: row.textEn || "" },
-                            vocab: (() => {
-                                if (Array.isArray(row.words)) return row.words;
-                                if (typeof row.words === 'string') {
-                                    try { return JSON.parse(row.words || "[]"); } catch (e) { return []; }
-                                }
-                                return row.words || [];
-                            })(),
+                            ja: { passage: row.textJaRuby, rawPassage: row.textJaPlain },
+                            zh: { passage: formatChineseRuby(row.textZhPinyin), rawPassage: row.textZhPinyin },
+                            en: { passage: row.textEn, rawPassage: row.textEn },
+                            vocab: typeof row.words === 'string' ? JSON.parse(row.words || "[]") : (row.words || []),
                             q1: {
                                 ja: { q: row.q1_ja || "", a: row.a1_ja || "", h: row.h1_ja || "", w1: row.q1_wrong1_ja || "", w2: row.q1_wrong2_ja || "", w3: row.q1_wrong3_ja || "" },
                                 zh: { q: row.q1_zh || "", a: row.a1_zh || "", h: row.h1_zh || "", w1: row.q1_wrong1_zh || "", w2: row.q1_wrong2_zh || "", w3: row.q1_wrong3_zh || "" },
@@ -333,18 +339,6 @@
             if(mode === 'vocab') renderVocab();
         }
 
-        function formatChineseRuby(text) {
-            if (!text) return "";
-            return text.replace(/([\u4E00-\u9FA5]+)\s*\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
-        }
-
-        function stripTextForTTS(text) {
-            return String(text || "")
-                .replace(/<[^>]*>/g, '')
-                .replace(/([\u4E00-\u9FA5]+)\s*\([^)]+\)/g, '$1')
-                .trim();
-        }
-
         function shuffleArray(arr) {
             const a = arr.slice();
             for (let i = a.length - 1; i > 0; i--) {
@@ -366,8 +360,7 @@
             currentLang = lang;
             quizMistakes = { 1: 0, 2: 0, 3: 0 };
             ['ja', 'zh', 'en'].forEach(l => document.getElementById(`btn-${l}`).classList.toggle('active', l === lang));
-            const passage = currentBook[lang].passage || "";
-            document.getElementById('passage-text').innerHTML = lang === 'zh' ? formatChineseRuby(passage) : passage;
+            document.getElementById('passage-text').innerHTML = currentBook[lang].passage || "";
             renderQuizzes(lang);
         }
 
