@@ -44,20 +44,20 @@
         .question-box { background: #f8f9fa; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #eee; }
         .quiz-item { margin-bottom: 15px; border-bottom: 1px dashed #ccc; padding-bottom: 15px; }
         .quiz-item:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
-        .quiz-choices { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; margin-top: 10px; }
+        .quiz-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
         .choice-btn {
-            padding: 14px 12px; border: 2px solid var(--border); border-radius: 14px;
-            background: #fff; font-size: 1rem; font-weight: bold; color: var(--text);
-            cursor: pointer; transition: 0.2s; line-height: 1.4; min-height: 52px;
+            padding: 12px; border: 2px solid var(--border); border-radius: 10px;
+            cursor: pointer; background: #fff; color: var(--text); font-weight: bold;
+            font-size: 1rem; line-height: 1.4; min-height: 48px; transition: 0.2s;
         }
         .choice-btn:hover:not(:disabled) {
             background: #fff0f5; border-color: var(--title-bg);
             transform: translateY(-2px); box-shadow: 0 4px 8px rgba(255, 143, 171, 0.25);
         }
         .choice-btn:active:not(:disabled) { transform: translateY(0); }
-        .choice-btn:disabled { opacity: 0.65; cursor: default; transform: none; box-shadow: none; }
-        .choice-btn.correct-pick { background: #d4edda; border-color: var(--success); }
-        .choice-btn.wrong-pick { background: #ffeaea; border-color: var(--danger); }
+        .choice-btn:disabled { opacity: 0.7; cursor: default; transform: none; box-shadow: none; }
+        .choice-btn.correct-pick { background: #d4edda; border-color: var(--success); color: #1e6b3a; }
+        .choice-btn.wrong-pick { background: #ffeaea; border-color: var(--danger); color: #c0392b; }
         
         .score-card { background: #e8f5e9; border: 2px solid var(--success); border-radius: 15px; padding: 20px; margin-top: 15px; }
         .score-correct-text { background: #fff; padding: 10px; border-radius: 10px; margin-bottom: 10px; font-size: 0.9rem; color: #555; }
@@ -139,8 +139,7 @@
                     <div id="passage-text"></div>
                 </div>
                 
-                <div class="question-box" id="quiz-container">
-                    </div>
+                <div class="question-box" id="quiz-container"></div>
 
                 <div class="mic-section">
                     <button id="main-mic-btn" class="mic-start-btn" onclick="toggleDynamicMic('main')">🎤 はつおんテスト</button>
@@ -225,14 +224,36 @@
                         const validData = rawData.filter(row => row.titleJa && String(row.titleJa).trim() !== "");
 
                         booksData = validData.map(row => ({
-                            grade: row.grade, category: row.category, title: row.titleJa, icon: '📖',
-                            ja: { passage: row.textJaRuby, rawPassage: row.textJaPlain },
-                            zh: { passage: row.textZhPinyin, rawPassage: row.textZhPinyin },
-                            en: { passage: row.textEn, rawPassage: row.textEn },
-                            vocab: row.words || [],
-                            q1: mapQuizBlock(row, 1),
-                            q2: mapQuizBlock(row, 2),
-                            q3: mapQuizBlock(row, 3)
+                            grade: row.grade || row[0] || "",
+                            id: row.id || row[1] || "",
+                            category: row.category || row[2] || "",
+                            title: row.titleJa || row[4] || "",
+                            icon: '📖',
+                            ja: { passage: row.textJaRuby || "", rawPassage: row.textJaPlain || "" },
+                            zh: { passage: row.textZhPinyin || "", rawPassage: row.textZhPinyin || "" },
+                            en: { passage: row.textEn || "", rawPassage: row.textEn || "" },
+                            vocab: (() => {
+                                if (Array.isArray(row.words)) return row.words;
+                                if (typeof row.words === 'string') {
+                                    try { return JSON.parse(row.words || "[]"); } catch (e) { return []; }
+                                }
+                                return row.words || [];
+                            })(),
+                            q1: {
+                                ja: { q: row.q1_ja || "", a: row.a1_ja || "", h: row.h1_ja || "", w1: row.q1_wrong1_ja || "", w2: row.q1_wrong2_ja || "", w3: row.q1_wrong3_ja || "" },
+                                zh: { q: row.q1_zh || "", a: row.a1_zh || "", h: row.h1_zh || "", w1: row.q1_wrong1_zh || "", w2: row.q1_wrong2_zh || "", w3: row.q1_wrong3_zh || "" },
+                                en: { q: row.q1_en || "", a: row.a1_en || "", h: row.h1_en || "", w1: row.q1_wrong1_en || "", w2: row.q1_wrong2_en || "", w3: row.q1_wrong3_en || "" }
+                            },
+                            q2: {
+                                ja: { q: row.q2_ja || "", a: row.a2_ja || "", h: row.h2_ja || "", w1: row.q2_wrong1_ja || "", w2: row.q2_wrong2_ja || "", w3: row.q2_wrong3_ja || "" },
+                                zh: { q: row.q2_zh || "", a: row.a2_zh || "", h: row.h2_zh || "", w1: row.q2_wrong1_zh || "", w2: row.q2_wrong2_zh || "", w3: row.q2_wrong3_zh || "" },
+                                en: { q: row.q2_en || "", a: row.a2_en || "", h: row.h2_en || "", w1: row.q2_wrong1_en || "", w2: row.q2_wrong2_en || "", w3: row.q2_wrong3_en || "" }
+                            },
+                            q3: {
+                                ja: { q: row.q3_ja || "", a: row.a3_ja || "", h: row.h3_ja || "", w1: row.q3_wrong1_ja || "", w2: row.q3_wrong2_ja || "", w3: row.q3_wrong3_ja || "" },
+                                zh: { q: row.q3_zh || "", a: row.a3_zh || "", h: row.h3_zh || "", w1: row.q3_wrong1_zh || "", w2: row.q3_wrong2_zh || "", w3: row.q3_wrong3_zh || "" },
+                                en: { q: row.q3_en || "", a: row.a3_en || "", h: row.h3_en || "", w1: row.q3_wrong1_en || "", w2: row.q3_wrong2_en || "", w3: row.q3_wrong3_en || "" }
+                            }
                         }));
                         renderLevelCards(); 
                     } else { renderLevelCards(); }
@@ -311,34 +332,6 @@
             if(mode === 'vocab') renderVocab();
         }
 
-        function formatChineseRuby(text) {
-            if (!text) return "";
-            return String(text).replace(/([\u4E00-\u9FFF]+)\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
-        }
-
-        function mapQuizLang(row, num, lang) {
-            const suffix = lang === 'ja' ? '_ja' : (lang === 'zh' ? '_zh' : '_en');
-            const legacyQ = lang === 'ja' ? (row[`q${num}`] || "") : "";
-            const legacyA = lang === 'ja' ? (row[`a${num}`] || "") : "";
-            const legacyH = lang === 'ja' ? (row[`h${num}`] || "") : "";
-            return {
-                q: row[`q${num}${suffix}`] || legacyQ || "",
-                a: row[`a${num}${suffix}`] || legacyA || "",
-                h: row[`h${num}${suffix}`] || legacyH || "",
-                w1: row[`q${num}_wrong1${suffix}`] || "",
-                w2: row[`q${num}_wrong2${suffix}`] || "",
-                w3: row[`q${num}_wrong3${suffix}`] || ""
-            };
-        }
-
-        function mapQuizBlock(row, num) {
-            return {
-                ja: mapQuizLang(row, num, 'ja'),
-                zh: mapQuizLang(row, num, 'zh'),
-                en: mapQuizLang(row, num, 'en')
-            };
-        }
-
         function shuffleArray(arr) {
             const a = arr.slice();
             for (let i = a.length - 1; i > 0; i--) {
@@ -358,10 +351,9 @@
 
         function setLang(lang) {
             currentLang = lang;
-            quizMistakes = { 1: 0, 2: 0, 3: 0 }; 
+            quizMistakes = { 1: 0, 2: 0, 3: 0 };
             ['ja', 'zh', 'en'].forEach(l => document.getElementById(`btn-${l}`).classList.toggle('active', l === lang));
-            const passage = currentBook[lang].passage || "";
-            document.getElementById('passage-text').innerHTML = lang === 'zh' ? formatChineseRuby(passage) : passage;
+            document.getElementById('passage-text').innerHTML = currentBook[lang].passage || "";
             renderQuizzes(lang);
         }
 
@@ -382,15 +374,11 @@
                 const block = currentBook[`q${qNum}`];
                 if (!block || !block[lang] || !block[lang].q) return "";
                 const d = block[lang];
-                const choices = shuffleArray([
-                    { text: d.a, correct: true },
-                    { text: d.w1, correct: false },
-                    { text: d.w2, correct: false },
-                    { text: d.w3, correct: false }
-                ].filter(c => c.text && String(c.text).trim() !== ""));
+                const correctAnswer = d.a || "";
+                const choices = shuffleArray([d.a, d.w1, d.w2, d.w3].filter(t => t && String(t).trim() !== ""));
 
-                const buttonsHtml = choices.map(c =>
-                    `<button type="button" class="choice-btn" data-q="${qNum}" onclick="checkQuizAnswer(${qNum}, ${c.correct}, '${lang}')">${escapeHtml(c.text)}</button>`
+                const buttonsHtml = choices.map(choiceText =>
+                    `<button type="button" class="choice-btn" onclick="checkQuizAnswer(${qNum}, ${JSON.stringify(choiceText)}, ${JSON.stringify(correctAnswer)}, '${lang}')">${escapeHtml(choiceText)}</button>`
                 ).join('');
 
                 return `
@@ -407,25 +395,32 @@
             container.innerHTML += createQ(3);
         }
 
-        function setQuizButtonsDisabled(qNum, pickedBtn, isCorrect) {
+        function lockQuizChoices(qNum, pickedBtn, pickedClass) {
             const area = document.getElementById(`choices-${qNum}`);
             if (!area) return;
             area.querySelectorAll('.choice-btn').forEach(btn => {
                 btn.disabled = true;
-                if (btn === pickedBtn) {
-                    btn.classList.add(isCorrect ? 'correct-pick' : 'wrong-pick');
-                }
+                if (btn === pickedBtn && pickedClass) btn.classList.add(pickedClass);
             });
         }
 
-        window.checkQuizAnswer = function(qNum, isCorrect, lang) {
+        function highlightCorrectChoice(qNum, correctAnswer) {
+            const area = document.getElementById(`choices-${qNum}`);
+            if (!area) return;
+            const target = String(correctAnswer).trim();
+            area.querySelectorAll('.choice-btn').forEach(btn => {
+                if (btn.textContent.trim() === target) btn.classList.add('correct-pick');
+            });
+        }
+
+        window.checkQuizAnswer = function(qNum, choiceText, correctAnswer, lang) {
             const res = document.getElementById(`res-${qNum}`);
             const block = currentBook[`q${qNum}`];
-            const data = block && block[lang] ? block[lang] : { a: "", h: "" };
-            const correct = data.a || "";
+            const data = block && block[lang] ? block[lang] : { h: "" };
             const hint = data.h || "";
             const pickedBtn = window.event && window.event.target ? window.event.target : null;
-            
+            const isCorrect = String(choiceText).trim() === String(correctAnswer).trim();
+
             const msgs = {
                 ja: { success: "🌟 大せいかい！ すごいね！", fail: "❌ おしい！", show: "❌ 3回間違えました。正解は「{ans}」です。", hintLabel: "💡ヒント:" },
                 zh: { success: "🌟 回答正确！太棒了！", fail: "❌ 差不多！", show: "❌ 错了3次。正确答案是「{ans}」。", hintLabel: "💡提示:" },
@@ -433,30 +428,24 @@
             };
             const msg = msgs[lang] || msgs.ja;
             const hintLine = hint ? `<br><span style="color:var(--muted); font-size:0.9em;">${msg.hintLabel} ${escapeHtml(hint)}</span>` : '';
-            
+
             if (isCorrect) {
                 res.innerHTML = `<span style='color:var(--success);'>${msg.success}</span>`;
                 quizMistakes[qNum] = 0;
-                setQuizButtonsDisabled(qNum, pickedBtn, true);
+                if (pickedBtn) pickedBtn.classList.add('correct-pick');
+                lockQuizChoices(qNum, null, null);
             } else {
                 quizMistakes[qNum]++;
+                if (pickedBtn) {
+                    pickedBtn.classList.add('wrong-pick');
+                    pickedBtn.disabled = true;
+                }
                 if (quizMistakes[qNum] >= 3) {
-                    res.innerHTML = `<span style='color:var(--danger); font-weight:bold;'>${msg.show.replace('{ans}', escapeHtml(correct))}</span>`;
-                    setQuizButtonsDisabled(qNum, pickedBtn, false);
-                    const area = document.getElementById(`choices-${qNum}`);
-                    if (area) {
-                        area.querySelectorAll('.choice-btn').forEach(btn => {
-                            if (btn.textContent.trim() === String(correct).trim()) {
-                                btn.classList.add('correct-pick');
-                            }
-                        });
-                    }
+                    res.innerHTML = `<span style='color:var(--danger); font-weight:bold;'>${msg.show.replace('{ans}', escapeHtml(correctAnswer))}</span>`;
+                    lockQuizChoices(qNum, null, null);
+                    highlightCorrectChoice(qNum, correctAnswer);
                 } else {
                     res.innerHTML = `<span style='color:var(--danger);'>${msg.fail} (${quizMistakes[qNum]}/3)</span>${hintLine}`;
-                    if (pickedBtn) {
-                        pickedBtn.classList.add('wrong-pick');
-                        pickedBtn.disabled = true;
-                    }
                 }
             }
         };
