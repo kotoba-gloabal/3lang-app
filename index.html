@@ -164,6 +164,16 @@
         let isRecording = false;
         window.quizMistakes = {};
 
+        function formatChineseRuby(text) {
+            if (!text) return "";
+            return text.replace(/([\u4E00-\u9FA5，。！？、]+)\s*\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
+        }
+
+        function formatLangContent(text, lang) {
+            if (!text) return "";
+            return lang === 'zh' ? formatChineseRuby(text) : escapeHtml(text);
+        }
+
         const API_URL = "https://script.google.com/macros/s/AKfycbwcFerv_iV0HfB_5J7Swm0cd3AjWDuydsCVTRg7A2uVesMhsRAHFGbTltUNWOIE8jy2/exec";
 
         const levels = [
@@ -180,11 +190,6 @@
         let activeFinalResult = null;
         let activeRecognizedText = "";
         let activeReferenceText = "";
-
-        function formatChineseRuby(text) {
-            if (!text) return "";
-            return text.replace(/([\u4E00-\u9FA5]+)\s*\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
-        }
 
         function escapeHtml(str) {
             return String(str)
@@ -375,13 +380,16 @@
 
                 let html = `
                     <div class="quiz-item" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
-                        <p style="font-weight:bold; margin: 0 0 5px 0;">${ui.q}${qNum}: ${escapeHtml(qData.q)}</p>
-                        <p style="font-size: 0.85em; color: var(--muted); margin: 0 0 10px 0;">${ui.hint} ${escapeHtml(qData.h)}</p>
+                        <p style="font-weight:bold; margin: 0 0 5px 0;">${ui.q}${qNum}: ${formatLangContent(qData.q, lang)}</p>
+                        <details style="margin-bottom: 10px; font-size: 0.85em;">
+                            <summary style="cursor: pointer; font-weight: bold; color: var(--muted);">${ui.hint} (クリックで開く)</summary>
+                            <div style="margin-top: 5px; padding: 8px; background: #f0f8ff; border-radius: 5px; color: var(--text);">${formatLangContent(qData.h, lang)}</div>
+                        </details>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                 `;
                 choices.forEach((choice, idx) => {
-                    const correctText = qData.a || "";
-                    html += `<button type="button" id="btn-${qNum}-${idx}" class="choice-btn" style="padding:12px; border:2px solid var(--border); border-radius:10px; cursor:pointer; background:#fff; font-weight:bold; color:var(--text);" onclick="checkQuizAnswer(${qNum}, ${choice.isCorrect}, ${JSON.stringify(correctText)}, 'btn-${qNum}-${idx}', '${lang}')">${escapeHtml(choice.text)}</button>`;
+                    const correctText = (qData.a || "").replace(/'/g, "\\'");
+                    html += `<button type="button" id="btn-${qNum}-${idx}" class="choice-btn" style="padding:12px; border:2px solid var(--border); border-radius:10px; cursor:pointer; background:#fff; font-weight:bold; color:var(--text);" onclick="checkQuizAnswer(${qNum}, ${choice.isCorrect}, '${correctText}', 'btn-${qNum}-${idx}', '${lang}')">${formatLangContent(choice.text, lang)}</button>`;
                 });
                 html += `</div><div id="res-${qNum}" style="margin-top:10px; font-weight:bold;"></div></div>`;
                 container.innerHTML += html;
@@ -389,9 +397,11 @@
         }
 
         window.checkQuizAnswer = function(qNum, isCorrect, correctText, btnId, lang) {
-            const res = document.getElementById(`res-${qNum}`);
+            const res = document.getElementById("res-" + qNum);
             const btn = document.getElementById(btnId);
             if (!res || !btn) return;
+
+            const answeredCorrect = (isCorrect === true || isCorrect === "true");
             const msgs = {
                 ja: { success: "🌟 大せいかい！", fail: "❌ おしい！", show: "❌ 3回間違えました。正解は「{ans}」です。" },
                 zh: { success: "🌟 回答正确！", fail: "❌ 差不多！", show: "❌ 错了3次。正确答案是「{ans}」。" },
@@ -399,19 +409,20 @@
             };
             const msg = msgs[lang] || msgs.ja;
 
-            if (isCorrect) {
-                res.innerHTML = `<span style='color:var(--success);'>${msg.success}</span>`;
+            if (answeredCorrect) {
+                res.innerHTML = "<span style=\"color:var(--success);\">" + msg.success + "</span>";
                 btn.style.background = "#d1ffd1";
                 btn.style.borderColor = "var(--success)";
+                btn.disabled = true;
                 window.quizMistakes[qNum] = 0;
             } else {
                 window.quizMistakes[qNum] = (window.quizMistakes[qNum] || 0) + 1;
                 btn.style.background = "#ffd1d1";
                 btn.style.borderColor = "var(--danger)";
                 if (window.quizMistakes[qNum] >= 3) {
-                    res.innerHTML = `<span style='color:var(--danger); font-weight:bold;'>${msg.show.replace('{ans}', escapeHtml(correctText))}</span>`;
+                    res.innerHTML = "<span style=\"color:var(--danger); font-weight:bold;\">" + msg.show.replace("{ans}", formatLangContent(correctText, lang)) + "</span>";
                 } else {
-                    res.innerHTML = `<span style='color:var(--danger);'>${msg.fail} (${window.quizMistakes[qNum]}/3)</span>`;
+                    res.innerHTML = "<span style=\"color:var(--danger);\">" + msg.fail + " (" + window.quizMistakes[qNum] + "/3)</span>";
                 }
             }
         };
@@ -490,12 +501,12 @@
                     <button class="hint-btn" style="margin-top:10px;" onclick="toggleHint('in-${lang}-${cardId}', '${hintText}')">ヒント</button>
                     <div style="flex:1; display:flex; flex-direction:column;">
                         <input type="text" id="in-${lang}-${cardId}" placeholder="単語を入力..." onkeypress="if(event.key === 'Enter') checkVocab('${cardId}', '${targetWord}', '${lang}')">
-                        ${lang === 'zh' ? `<small style="color:var(--muted); margin-top:3px; padding-left:5px; font-weight:bold;">ピンイン: ${v.zh_pinyin}</small>` : ''}
+                        ${lang === 'zh' ? `<small style="color:var(--muted); margin-top:3px; padding-left:5px; font-weight:bold;">ピンイン: ${formatChineseRuby(v.zh_pinyin || '')}</small>` : ''}
                     </div>
                     <button class="check-btn" style="margin-top:2px;" onclick="checkVocab('${cardId}', '${targetWord}', '${lang}')">かくにん</button>
                 </div>
                 <div id="res-${lang}-${cardId}" class="vocab-result hidden">
-                    <div style="font-weight:bold;">正解: <span style="color:var(--accent); font-size:1.2rem;">${targetWord}</span></div>
+                    <div style="font-weight:bold;">正解: <span style="color:var(--accent); font-size:1.2rem;">${lang === 'zh' ? formatChineseRuby(targetWord || '') : escapeHtml(targetWord || '')}</span></div>
                     <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
                         <button id="btn-word-${lang}-${cardId}" class="mic-start-btn" style="margin:0; padding:8px 15px; font-size:0.9rem;" onclick="toggleDynamicMic('word-${lang}-${cardId}', '${targetWord}', '${lang}')">🎤 単語をはつおん</button>
                     </div>
