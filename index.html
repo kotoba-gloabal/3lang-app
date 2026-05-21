@@ -98,7 +98,7 @@
 
     <div id="please-login-view">
         <h2>🔒 ログインしてください</h2>
-        <p style="color: var(--muted); margin-bottom: 20px;">右上のボタンからログインしてください。</p>
+        <p>右上のボタンからログインしてください。</p>
     </div>
 
     <div id="level-selection-view" class="hidden">
@@ -194,14 +194,6 @@
                 .replace(/"/g, '&quot;');
         }
 
-        function parseVocab(words) {
-            try {
-                return typeof words === 'string' ? JSON.parse(words || "[]") : (words || []);
-            } catch (e) {
-                return [];
-            }
-        }
-
         function stripTextForTTS(text) {
             return String(text || "")
                 .replace(/<[^>]*>/g, '')
@@ -247,26 +239,16 @@
                     
                     if (booksData.length === 0) {
                         document.getElementById('level-list').innerHTML = "<h3 style='grid-column: 1 / -1; text-align:center;'>📚 データを読み込み中...</h3>";
-                        const res = await fetch(API_URL + "?t=" + new Date().getTime(), {
-                            cache: "no-store",
-                            headers: {
-                                "Cache-Control": "no-cache, no-store, must-revalidate",
-                                "Pragma": "no-cache"
-                            }
-                        });
+                        const res = await fetch(API_URL + "?t=" + new Date().getTime(), { cache: "no-store" });
                         const rawData = await res.json();
                         const validData = rawData.filter(r => r.id && r.titleJa);
 
                         booksData = validData.map(row => ({
-                            grade: row.grade,
-                            id: row.id,
-                            category: row.category,
-                            title: row.titleJa,
-                            icon: '📖',
+                            grade: row.grade, id: row.id, category: row.category, title: row.titleJa, icon: '📖',
                             ja: { passage: row.textJaRuby, rawPassage: row.textJaPlain },
                             zh: { passage: formatChineseRuby(row.textZhPinyin), rawPassage: row.textZhPinyin },
                             en: { passage: row.textEn, rawPassage: row.textEn },
-                            vocab: parseVocab(row.words),
+                            vocab: typeof row.words === 'string' ? JSON.parse(row.words || "[]") : (row.words || []),
                             q1: {
                                 ja: { q: row.q1_ja || "", a: row.a1_ja || "", h: row.h1_ja || "", w1: row.q1_wrong1_ja || "", w2: row.q1_wrong2_ja || "", w3: row.q1_wrong3_ja || "" },
                                 zh: { q: row.q1_zh || "", a: row.a1_zh || "", h: row.h1_zh || "", w1: row.q1_wrong1_zh || "", w2: row.q1_wrong2_zh || "", w3: row.q1_wrong3_zh || "" },
@@ -371,7 +353,6 @@
             const container = document.getElementById('quiz-container');
             if (!currentBook || !container) return;
             window.quizMistakes = {};
-
             const uiTexts = {
                 ja: { title: "🎯 クイズにちょうせん！", q: "Q", hint: "💡ヒント:" },
                 zh: { title: "🎯 挑战测验！", q: "问", hint: "💡提示:" },
@@ -396,11 +377,11 @@
                     <div class="quiz-item" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
                         <p style="font-weight:bold; margin: 0 0 5px 0;">${ui.q}${qNum}: ${escapeHtml(qData.q)}</p>
                         <p style="font-size: 0.85em; color: var(--muted); margin: 0 0 10px 0;">${ui.hint} ${escapeHtml(qData.h)}</p>
-                        <div class="quiz-choices" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                 `;
                 choices.forEach((choice, idx) => {
                     const correctText = qData.a || "";
-                    html += `<button type="button" id="btn-${qNum}-${idx}" class="choice-btn" onclick="checkQuizAnswer(${qNum}, ${choice.isCorrect}, ${JSON.stringify(correctText)}, 'btn-${qNum}-${idx}', '${lang}')">${escapeHtml(choice.text)}</button>`;
+                    html += `<button type="button" id="btn-${qNum}-${idx}" class="choice-btn" style="padding:12px; border:2px solid var(--border); border-radius:10px; cursor:pointer; background:#fff; font-weight:bold; color:var(--text);" onclick="checkQuizAnswer(${qNum}, ${choice.isCorrect}, ${JSON.stringify(correctText)}, 'btn-${qNum}-${idx}', '${lang}')">${escapeHtml(choice.text)}</button>`;
                 });
                 html += `</div><div id="res-${qNum}" style="margin-top:10px; font-weight:bold;"></div></div>`;
                 container.innerHTML += html;
@@ -411,7 +392,6 @@
             const res = document.getElementById(`res-${qNum}`);
             const btn = document.getElementById(btnId);
             if (!res || !btn) return;
-
             const msgs = {
                 ja: { success: "🌟 大せいかい！", fail: "❌ おしい！", show: "❌ 3回間違えました。正解は「{ans}」です。" },
                 zh: { success: "🌟 回答正确！", fail: "❌ 差不多！", show: "❌ 错了3次。正确答案是「{ans}」。" },
