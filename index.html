@@ -85,6 +85,38 @@
         .check-btn { background: var(--title-bg); color: white; border: none; border-radius: 8px; padding: 10px 15px; cursor: pointer; font-weight: bold; height: 42px;}
         .vocab-result { background: #fafafa; border-radius: 10px; padding: 15px; border-left: 4px solid var(--success); display: flex; flex-direction: column; gap: 10px;}
         
+        .match-columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        @media (max-width: 700px) { .match-columns { grid-template-columns: 1fr; } }
+        .match-col { background: #fafafa; border-radius: 16px; padding: 12px; border: 2px solid var(--border); }
+        .match-col-title { text-align: center; font-weight: bold; margin-bottom: 10px; padding: 8px; border-radius: 10px; color: white; }
+        .match-col-title.col-ja { background: var(--tab-active-ja); }
+        .match-col-title.col-zh { background: var(--tab-active-zh); }
+        .match-col-title.col-en { background: var(--tab-active-en); }
+        .match-word-row { display: flex; align-items: flex-start; gap: 6px; margin-bottom: 8px; }
+        .match-word-btn {
+            flex: 1; padding: 10px; border: 2px solid var(--border); border-radius: 12px;
+            background: #fff; cursor: pointer; text-align: left; transition: 0.2s; line-height: 1.4;
+        }
+        .match-word-btn.selected { border-color: #f39c12; background: #fff8e6; box-shadow: 0 0 0 3px rgba(243,156,18,0.25); }
+        .match-word-btn.matched { background: #d4edda !important; border-color: var(--success) !important; pointer-events: none; opacity: 0.9; }
+        .match-word-btn.shake-wrong { animation: shakeWrong 0.5s; background: #ffeaea !important; border-color: var(--danger) !important; }
+        @keyframes shakeWrong {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+        .match-progress { text-align: center; margin-top: 16px; font-weight: bold; color: var(--title-bg); }
+        .story-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 3px dashed var(--border); }
+        .nav-story-btn {
+            flex: 1; padding: 14px 20px; border: none; border-radius: 50px; font-size: 1.05rem; font-weight: bold;
+            cursor: pointer; background: var(--title-bg); color: white; box-shadow: 0 4px 0 var(--title-shadow); transition: 0.2s;
+        }
+        .nav-story-btn:hover:not(:disabled) { transform: translateY(-2px); }
+        .nav-story-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; box-shadow: none; background: #ccc; }
+        #story-nav-label { font-weight: bold; color: var(--muted); white-space: nowrap; }
+
         #please-login-view { text-align: center; margin-top: 50px; background: var(--card); padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(255,143,171,0.15); max-width: 500px; margin-left: auto; margin-right: auto; }
         .back-btn { padding:10px 20px; border-radius:20px; border:none; background:#fff; font-weight:bold; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; display: inline-block; }
         .back-btn:hover { background: #f8f9fa; }
@@ -152,17 +184,32 @@
             <div id="mode-vocab" class="hidden">
                 <div id="vocab-container" class="vocab-list"></div>
             </div>
+
+            <div id="story-nav" class="story-nav hidden">
+                <button type="button" id="btn-prev-story" class="nav-story-btn" onclick="navigateStory(-1)">◀ 前の問題</button>
+                <span id="story-nav-label"></span>
+                <button type="button" id="btn-next-story" class="nav-story-btn" onclick="navigateStory(1)">次の問題 ▶</button>
+            </div>
         </div>
     </div>
 
     <script>
         let booksData = []; 
+        let levelFilteredBooks = [];
         let currentBook = null;
         let currentLevel = null;
+        let currentIndex = 0;
         let currentLang = 'ja';
         let currentMode = 'read';
         let isRecording = false;
         window.quizMistakes = {};
+        let matchSelection = [];
+        let matchMatchedIds = new Set();
+
+        function formatJapaneseRuby(text) {
+            if (!text) return "";
+            return text.replace(/([一-龠]+)\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
+        }
 
         function formatChineseRuby(text) {
             if (!text) return "";
@@ -171,7 +218,9 @@
 
         function formatLangContent(text, lang) {
             if (!text) return "";
-            return lang === 'zh' ? formatChineseRuby(text) : escapeHtml(text);
+            if (lang === 'ja') return formatJapaneseRuby(text);
+            if (lang === 'zh') return formatChineseRuby(text);
+            return escapeHtml(text);
         }
 
         const API_URL = "https://script.google.com/macros/s/AKfycbwcFerv_iV0HfB_5J7Swm0cd3AjWDuydsCVTRg7A2uVesMhsRAHFGbTltUNWOIE8jy2/exec";
@@ -202,8 +251,18 @@
         function stripTextForTTS(text) {
             return String(text || "")
                 .replace(/<[^>]*>/g, '')
-                .replace(/([\u4E00-\u9FA5]+)\s*\([^)]+\)/g, '$1')
+                .replace(/([一-龠]+)\([^)]+\)/g, '$1')
+                .replace(/([\u4E00-\u9FA5，。！？、]+)\s*\([^)]+\)/g, '$1')
                 .trim();
+        }
+
+        function shuffleArray(arr) {
+            const a = arr.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
         }
 
         function forceStopMic() {
@@ -250,7 +309,7 @@
 
                         booksData = validData.map(row => ({
                             grade: row.grade, id: row.id, category: row.category, title: row.titleJa, icon: '📖',
-                            ja: { passage: row.textJaRuby, rawPassage: row.textJaPlain },
+                            ja: { passage: row.textJaRuby || formatJapaneseRuby(row.textJaPlain || ""), rawPassage: row.textJaPlain || row.textJaRuby || "" },
                             zh: { passage: formatChineseRuby(row.textZhPinyin), rawPassage: row.textZhPinyin },
                             en: { passage: row.textEn, rawPassage: row.textEn },
                             vocab: typeof row.words === 'string' ? JSON.parse(row.words || "[]") : (row.words || []),
@@ -322,11 +381,12 @@
                 return;
             }
 
-            filteredBooks.forEach(book => {
+            levelFilteredBooks = filteredBooks;
+            levelFilteredBooks.forEach((book, index) => {
                 const card = document.createElement('div');
                 card.className = 'book-card';
                 card.innerHTML = `<span class="book-icon">${book.icon || '📖'}</span><div style="font-size:0.8rem; color:var(--muted); margin-bottom:5px;">[${book.category || '未分類'}]</div><div style="font-weight:bold; line-height:1.4;">${book.title || 'タイトルなし'}</div>`;
-                card.onclick = () => { currentBook = book; startStudy(); };
+                card.onclick = () => { currentIndex = index; currentBook = book; startStudy(); };
                 list.appendChild(card);
             });
         }
@@ -335,7 +395,40 @@
             document.getElementById('book-title').innerText = currentBook.title;
             hideAllViews();
             document.getElementById('study-view').classList.remove('hidden');
+            updateStoryNav();
             setLang('ja');
+            if (currentMode === 'vocab') renderMatchGame();
+        }
+
+        function updateStoryNav() {
+            const nav = document.getElementById('story-nav');
+            const label = document.getElementById('story-nav-label');
+            const prevBtn = document.getElementById('btn-prev-story');
+            const nextBtn = document.getElementById('btn-next-story');
+            if (!nav) return;
+            const total = levelFilteredBooks.length;
+            if (total <= 1) {
+                nav.classList.add('hidden');
+                return;
+            }
+            nav.classList.remove('hidden');
+            if (label) label.textContent = (currentIndex + 1) + " / " + total;
+            if (prevBtn) prevBtn.disabled = currentIndex <= 0;
+            if (nextBtn) nextBtn.disabled = currentIndex >= total - 1;
+        }
+
+        function navigateStory(delta) {
+            if (!levelFilteredBooks.length) return;
+            const nextIndex = currentIndex + delta;
+            if (nextIndex < 0 || nextIndex >= levelFilteredBooks.length) return;
+            currentIndex = nextIndex;
+            currentBook = levelFilteredBooks[currentIndex];
+            forceStopMic();
+            document.getElementById('book-title').innerText = currentBook.title;
+            setLang(currentLang);
+            if (currentMode === 'vocab') renderMatchGame();
+            updateStoryNav();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function switchMode(mode) {
@@ -344,7 +437,7 @@
             document.getElementById('tab-vocab').classList.toggle('active', mode === 'vocab');
             document.getElementById('mode-read').classList.toggle('hidden', mode !== 'read');
             document.getElementById('mode-vocab').classList.toggle('hidden', mode !== 'vocab');
-            if(mode === 'vocab') renderVocab();
+            if(mode === 'vocab') renderMatchGame();
         }
 
         function setLang(lang) {
@@ -359,40 +452,69 @@
             if (!currentBook || !container) return;
             window.quizMistakes = {};
             const uiTexts = {
-                ja: { title: "🎯 クイズにちょうせん！", q: "Q", hint: "💡ヒント:" },
-                zh: { title: "🎯 挑战测验！", q: "问", hint: "💡提示:" },
-                en: { title: "🎯 Quiz Time!", q: "Q", hint: "💡Hint:" }
+                ja: { title: "🎯 クイズにちょうせん！", q: "Q" },
+                zh: { title: "🎯 挑战测验！", q: "问" },
+                en: { title: "🎯 Quiz Time!", q: "Q" }
             };
             const ui = uiTexts[lang] || uiTexts.ja;
-            container.innerHTML = `<h3 style='margin-top:0; color:var(--title-bg);'>${ui.title}</h3>`;
+            container.innerHTML = "<h3 style='margin-top:0; color:var(--title-bg);'>" + ui.title + "</h3>";
 
             [1, 2, 3].forEach(qNum => {
-                const qData = currentBook[`q${qNum}`]?.[lang];
+                const qData = currentBook["q" + qNum] && currentBook["q" + qNum][lang];
                 if (!qData || !qData.q) return;
 
-                let choices = [
+                const choices = [
                     { text: qData.a, isCorrect: true },
                     { text: qData.w1, isCorrect: false },
                     { text: qData.w2, isCorrect: false },
                     { text: qData.w3, isCorrect: false }
                 ].filter(c => c.text);
-                choices.sort(() => Math.random() - 0.5);
+                shuffleArray(choices);
 
-                let html = `
-                    <div class="quiz-item" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
-                        <p style="font-weight:bold; margin: 0 0 5px 0;">${ui.q}${qNum}: ${formatLangContent(qData.q, lang)}</p>
-                        <details style="margin-bottom: 10px; font-size: 0.85em;">
-                            <summary style="cursor: pointer; font-weight: bold; color: var(--muted);">${ui.hint} (クリックで開く)</summary>
-                            <div style="margin-top: 5px; padding: 8px; background: #f0f8ff; border-radius: 5px; color: var(--text);">${formatLangContent(qData.h, lang)}</div>
-                        </details>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-                `;
+                const item = document.createElement("div");
+                item.className = "quiz-item";
+                item.style.cssText = "margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);";
+
+                const qLine = document.createElement("p");
+                qLine.style.cssText = "font-weight:bold; margin: 0 0 5px 0;";
+                qLine.innerHTML = ui.q + qNum + ": " + formatLangContent(qData.q, lang);
+                item.appendChild(qLine);
+
+                const details = document.createElement("details");
+                details.style.marginBottom = "10px";
+                const summary = document.createElement("summary");
+                summary.style.cssText = "cursor: pointer; font-weight: bold; color: var(--muted);";
+                summary.textContent = "💡 ヒントを見る";
+                const hintBody = document.createElement("div");
+                hintBody.style.cssText = "margin-top: 5px; padding: 8px; background: #f0f8ff; border-radius: 5px; color: var(--text);";
+                hintBody.innerHTML = formatLangContent(qData.h, lang);
+                details.appendChild(summary);
+                details.appendChild(hintBody);
+                item.appendChild(details);
+
+                const grid = document.createElement("div");
+                grid.className = "quiz-choices";
+                grid.style.marginTop = "10px";
+
                 choices.forEach((choice, idx) => {
-                    const correctText = (qData.a || "").replace(/'/g, "\\'");
-                    html += `<button type="button" id="btn-${qNum}-${idx}" class="choice-btn" style="padding:12px; border:2px solid var(--border); border-radius:10px; cursor:pointer; background:#fff; font-weight:bold; color:var(--text);" onclick="checkQuizAnswer(${qNum}, ${choice.isCorrect}, '${correctText}', 'btn-${qNum}-${idx}', '${lang}')">${formatLangContent(choice.text, lang)}</button>`;
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.id = "btn-" + qNum + "-" + idx;
+                    btn.className = "choice-btn";
+                    btn.innerHTML = formatLangContent(choice.text, lang);
+                    btn.addEventListener("click", function() {
+                        window.checkQuizAnswer(qNum, choice.isCorrect, qData.a || "", btn.id, lang);
+                    });
+                    grid.appendChild(btn);
                 });
-                html += `</div><div id="res-${qNum}" style="margin-top:10px; font-weight:bold;"></div></div>`;
-                container.innerHTML += html;
+                item.appendChild(grid);
+
+                const resDiv = document.createElement("div");
+                resDiv.id = "res-" + qNum;
+                resDiv.style.cssText = "margin-top:10px; font-weight:bold;";
+                item.appendChild(resDiv);
+
+                container.appendChild(item);
             });
         }
 
@@ -403,7 +525,7 @@
 
             const answeredCorrect = (isCorrect === true || isCorrect === "true");
             const msgs = {
-                ja: { success: "🌟 大せいかい！", fail: "❌ おしい！", show: "❌ 3回間違えました。正解は「{ans}」です。" },
+                ja: { success: "🌟 大正解！", fail: "❌ おしい！", show: "❌ 3回間違えました。正解は「{ans}」です。" },
                 zh: { success: "🌟 回答正确！", fail: "❌ 差不多！", show: "❌ 错了3次。正确答案是「{ans}」。" },
                 en: { success: "🌟 Correct!", fail: "❌ Almost!", show: "❌ 3 mistakes. The answer is '{ans}'." }
             };
@@ -413,7 +535,6 @@
                 res.innerHTML = "<span style=\"color:var(--success);\">" + msg.success + "</span>";
                 btn.style.background = "#d1ffd1";
                 btn.style.borderColor = "var(--success)";
-                btn.disabled = true;
                 window.quizMistakes[qNum] = 0;
             } else {
                 window.quizMistakes[qNum] = (window.quizMistakes[qNum] || 0) + 1;
@@ -447,73 +568,150 @@
             setTimeout(() => { window.speechSynthesis.speak(ut); }, 50);
         }
 
-        function toggleHint(inputId, hintText) {
-            const el = document.getElementById(inputId);
-            el.placeholder = el.placeholder === hintText ? "単語を入力..." : hintText;
-        }
-
-        function checkVocab(id, targetWord, lang) {
-            const resBox = document.getElementById(`res-${lang}-${id}`);
-            const input = document.getElementById(`in-${lang}-${id}`);
-            if (!resBox.classList.contains('hidden')) { resBox.classList.add('hidden'); return; }
-
-            if(input.value.trim() === targetWord) {
-                input.style.background = "#d1ffd1"; input.style.borderColor = "var(--success)";
-            } else {
-                input.style.background = "#ffd1d1"; input.style.borderColor = "var(--danger)";
-            }
-            resBox.classList.remove('hidden'); 
-        }
-
-        function renderVocab() {
+        function renderMatchGame() {
             const container = document.getElementById('vocab-container');
+            if (!container) return;
             container.innerHTML = "";
-            if(!currentBook.vocab || currentBook.vocab.length === 0) {
-                container.innerHTML = "<p style='text-align:center; color:var(--muted); font-weight:bold;'>このお話には単語カードがありません。</p>";
+            matchSelection = [];
+            matchMatchedIds = new Set();
+
+            if (!currentBook || !currentBook.vocab || currentBook.vocab.length === 0) {
+                container.innerHTML = "<p style='text-align:center; color:var(--muted); font-weight:bold;'>このお話には単語がありません。</p>";
                 return;
             }
-            currentBook.vocab.forEach((v, idx) => {
-                const cardId = `word-${idx}`;
-                const card = document.createElement('div');
-                card.className = 'vocab-card';
-                card.innerHTML = `
-                    <div class="vocab-top">
-                        <div style="font-size:50px; text-align:center; min-width: 60px;">${v.icon || '✨'}</div>
-                        <div class="vocab-inputs">
-                            ${createVocabRow(v, 'ja', '🇯🇵', cardId)}
-                            ${createVocabRow(v, 'zh', '🇨🇳', cardId)}
-                            ${createVocabRow(v, 'en', '🇺🇸', cardId)}
-                        </div>
-                    </div>
-                `;
-                container.appendChild(card);
+
+            const words = currentBook.vocab.map((v, idx) => ({
+                id: String(v.id != null ? v.id : idx),
+                ja: v.ja || "",
+                zh: v.zh || v.zh_pinyin || "",
+                en: v.en || "",
+                jaRaw: v.ja || "",
+                zhRaw: v.zh || v.zh_pinyin || "",
+                enRaw: v.en || ""
+            }));
+
+            const title = document.createElement("h3");
+            title.style.cssText = "text-align:center; color:var(--title-bg); margin:0 0 16px 0;";
+            title.textContent = "🔗 3言語マッチング";
+            container.appendChild(title);
+
+            const colsWrap = document.createElement("div");
+            colsWrap.className = "match-columns";
+
+            const colDefs = [
+                { lang: "ja", title: "🇯🇵 日本語", cls: "col-ja" },
+                { lang: "zh", title: "🇨🇳 中国語", cls: "col-zh" },
+                { lang: "en", title: "🇺🇸 English", cls: "col-en" }
+            ];
+
+            colDefs.forEach(col => {
+                const colEl = document.createElement("div");
+                colEl.className = "match-col";
+                const colTitle = document.createElement("div");
+                colTitle.className = "match-col-title " + col.cls;
+                colTitle.textContent = col.title;
+                colEl.appendChild(colTitle);
+
+                shuffleArray(words).forEach(w => {
+                    if (matchMatchedIds.has(w.id)) return;
+                    const label = col.lang === "ja" ? formatJapaneseRuby(w.ja) :
+                        col.lang === "zh" ? formatChineseRuby(w.zh) : escapeHtml(w.en);
+                    const ttsText = col.lang === "ja" ? w.jaRaw : col.lang === "zh" ? w.zhRaw : w.enRaw;
+                    if (!ttsText) return;
+
+                    const row = document.createElement("div");
+                    row.className = "match-word-row";
+
+                    const ttsBtn = document.createElement("button");
+                    ttsBtn.type = "button";
+                    ttsBtn.className = "tts-btn";
+                    ttsBtn.style.padding = "5px 8px";
+                    ttsBtn.textContent = "🔊";
+                    ttsBtn.addEventListener("click", function(e) {
+                        e.stopPropagation();
+                        playTTS(stripTextForTTS(ttsText), col.lang);
+                    });
+
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = "match-word-btn";
+                    btn.dataset.wordId = w.id;
+                    btn.dataset.lang = col.lang;
+                    btn.innerHTML = label;
+                    btn.addEventListener("click", function() { onMatchWordClick(btn); });
+
+                    row.appendChild(ttsBtn);
+                    row.appendChild(btn);
+                    colEl.appendChild(row);
+                });
+                colsWrap.appendChild(colEl);
             });
+
+            container.appendChild(colsWrap);
+
+            const progress = document.createElement("div");
+            progress.className = "match-progress";
+            progress.id = "match-progress";
+            progress.textContent = "0 / " + words.length + " セット完成";
+            container.appendChild(progress);
         }
 
-        function createVocabRow(v, lang, flag, cardId) {
-            const targetWord = lang === 'ja' ? v.ja : (lang === 'zh' ? (v.zh || v.zh_pinyin) : v.en);
-            const hintText = lang === 'ja' ? v.ja : (lang === 'zh' ? v.zh_pinyin : "English");
-            
-            return `
-                <div class="vocab-row">
-                    <span style="font-size:1.2rem; margin-top:10px;">${flag}</span> 
-                    <button class="tts-btn" style="padding:5px; margin-top:8px;" onclick="playTTS('${targetWord}', '${lang}')">🔊</button>
-                    <button class="hint-btn" style="margin-top:10px;" onclick="toggleHint('in-${lang}-${cardId}', '${hintText}')">ヒント</button>
-                    <div style="flex:1; display:flex; flex-direction:column;">
-                        <input type="text" id="in-${lang}-${cardId}" placeholder="単語を入力..." onkeypress="if(event.key === 'Enter') checkVocab('${cardId}', '${targetWord}', '${lang}')">
-                        ${lang === 'zh' ? `<small style="color:var(--muted); margin-top:3px; padding-left:5px; font-weight:bold;">ピンイン: ${formatChineseRuby(v.zh_pinyin || '')}</small>` : ''}
-                    </div>
-                    <button class="check-btn" style="margin-top:2px;" onclick="checkVocab('${cardId}', '${targetWord}', '${lang}')">かくにん</button>
-                </div>
-                <div id="res-${lang}-${cardId}" class="vocab-result hidden">
-                    <div style="font-weight:bold;">正解: <span style="color:var(--accent); font-size:1.2rem;">${lang === 'zh' ? formatChineseRuby(targetWord || '') : escapeHtml(targetWord || '')}</span></div>
-                    <div style="display:flex; gap:10px; align-items:center; margin-top:5px;">
-                        <button id="btn-word-${lang}-${cardId}" class="mic-start-btn" style="margin:0; padding:8px 15px; font-size:0.9rem;" onclick="toggleDynamicMic('word-${lang}-${cardId}', '${targetWord}', '${lang}')">🎤 単語をはつおん</button>
-                    </div>
-                    <div id="word-${lang}-${cardId}-score-area"></div>
-                    <div id="word-${lang}-${cardId}-advice-area" class="ai-advice-box hidden"></div>
-                </div>
-            `;
+        function updateMatchProgress(total) {
+            const el = document.getElementById("match-progress");
+            if (el) el.textContent = matchMatchedIds.size + " / " + total + " セット完成";
+        }
+
+        function clearMatchSelectionHighlight() {
+            document.querySelectorAll(".match-word-btn.selected").forEach(b => b.classList.remove("selected"));
+        }
+
+        function resetMatchSelection() {
+            matchSelection = [];
+            clearMatchSelectionHighlight();
+        }
+
+        function onMatchWordClick(btn) {
+            if (btn.classList.contains("matched")) return;
+            const wordId = btn.dataset.wordId;
+            const lang = btn.dataset.lang;
+            if (matchMatchedIds.has(wordId)) return;
+
+            const existingIdx = matchSelection.findIndex(s => s.lang === lang);
+            if (existingIdx >= 0) {
+                matchSelection[existingIdx].btn.classList.remove("selected");
+                matchSelection.splice(existingIdx, 1);
+            }
+
+            btn.classList.add("selected");
+            matchSelection.push({ wordId: wordId, lang: lang, btn: btn });
+
+            if (matchSelection.length < 3) return;
+
+            const ids = matchSelection.map(s => s.wordId);
+            const langs = matchSelection.map(s => s.lang);
+            const allSameId = ids.every(id => id === ids[0]);
+            const allDifferentLang = new Set(langs).size === 3;
+
+            if (allSameId && allDifferentLang) {
+                matchMatchedIds.add(ids[0]);
+                matchSelection.forEach(s => {
+                    s.btn.classList.remove("selected");
+                    s.btn.classList.add("matched");
+                });
+                resetMatchSelection();
+                const total = (currentBook.vocab || []).length;
+                updateMatchProgress(total);
+                if (matchMatchedIds.size >= total) {
+                    const prog = document.getElementById("match-progress");
+                    if (prog) prog.textContent = "🎉 ぜんぶ マッチできました！";
+                }
+            } else {
+                matchSelection.forEach(s => {
+                    s.btn.classList.add("shake-wrong");
+                    setTimeout(function() { s.btn.classList.remove("shake-wrong"); }, 500);
+                });
+                setTimeout(resetMatchSelection, 500);
+            }
         }
 
         // ==========================================
