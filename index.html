@@ -231,7 +231,13 @@
                     
                     if (booksData.length === 0) {
                         document.getElementById('level-list').innerHTML = "<h3 style='grid-column: 1 / -1; text-align:center;'>📚 データを読み込み中...</h3>";
-                        const res = await fetch(SPREADSHEET_API_URL);
+                        const res = await fetch(SPREADSHEET_API_URL + "?t=" + new Date().getTime(), {
+                            cache: "no-store",
+                            headers: {
+                                "Cache-Control": "no-cache, no-store, must-revalidate",
+                                "Pragma": "no-cache"
+                            }
+                        });
                         const rawData = await res.json();
                         
                         const validData = rawData.filter(row => row.titleJa && String(row.titleJa).trim() !== "");
