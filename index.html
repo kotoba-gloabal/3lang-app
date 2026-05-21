@@ -162,9 +162,9 @@
         let currentLang = 'ja';
         let currentMode = 'read';
         let isRecording = false;
-        window.quizMistakes = {}; // ミスカウント用グローバル変数
+        window.quizMistakes = {};
 
-        const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbwcFerv_iV0HfB_5J7Swm0cd3AjWDuydsCVTRg7A2uVesMhsRAHFGbTltUNWOIE8jy2/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbwcFerv_iV0HfB_5J7Swm0cd3AjWDuydsCVTRg7A2uVesMhsRAHFGbTltUNWOIE8jy2/exec";
 
         const levels = [
             { id: 1, name: "Level 1", grade: "1年生", icon: "🐣" },
@@ -184,6 +184,22 @@
         function formatChineseRuby(text) {
             if (!text) return "";
             return text.replace(/([\u4E00-\u9FA5]+)\s*\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function parseVocab(words) {
+            try {
+                return typeof words === 'string' ? JSON.parse(words || "[]") : (words || []);
+            } catch (e) {
+                return [];
+            }
         }
 
         function stripTextForTTS(text) {
@@ -231,7 +247,7 @@
                     
                     if (booksData.length === 0) {
                         document.getElementById('level-list').innerHTML = "<h3 style='grid-column: 1 / -1; text-align:center;'>📚 データを読み込み中...</h3>";
-                        const res = await fetch(SPREADSHEET_API_URL + "?t=" + new Date().getTime(), {
+                        const res = await fetch(API_URL + "?t=" + new Date().getTime(), {
                             cache: "no-store",
                             headers: {
                                 "Cache-Control": "no-cache, no-store, must-revalidate",
@@ -239,8 +255,7 @@
                             }
                         });
                         const rawData = await res.json();
-                        
-                        const validData = rawData.filter(row => row.titleJa && String(row.titleJa).trim() !== "");
+                        const validData = rawData.filter(r => r.id && r.titleJa);
 
                         booksData = validData.map(row => ({
                             grade: row.grade,
@@ -251,7 +266,7 @@
                             ja: { passage: row.textJaRuby, rawPassage: row.textJaPlain },
                             zh: { passage: formatChineseRuby(row.textZhPinyin), rawPassage: row.textZhPinyin },
                             en: { passage: row.textEn, rawPassage: row.textEn },
-                            vocab: typeof row.words === 'string' ? JSON.parse(row.words || "[]") : (row.words || []),
+                            vocab: parseVocab(row.words),
                             q1: {
                                 ja: { q: row.q1_ja || "", a: row.a1_ja || "", h: row.h1_ja || "", w1: row.q1_wrong1_ja || "", w2: row.q1_wrong2_ja || "", w3: row.q1_wrong3_ja || "" },
                                 zh: { q: row.q1_zh || "", a: row.a1_zh || "", h: row.h1_zh || "", w1: row.q1_wrong1_zh || "", w2: row.q1_wrong2_zh || "", w3: row.q1_wrong3_zh || "" },
@@ -355,8 +370,6 @@
         function renderQuizzes(lang) {
             const container = document.getElementById('quiz-container');
             if (!currentBook || !container) return;
-
-            // 切り替え時にミスカウントをリセット
             window.quizMistakes = {};
 
             const uiTexts = {
@@ -376,20 +389,18 @@
                     { text: qData.w1, isCorrect: false },
                     { text: qData.w2, isCorrect: false },
                     { text: qData.w3, isCorrect: false }
-                ].filter(c => c.text); // 空の選択肢を除外
-
-                choices.sort(() => Math.random() - 0.5); // シャッフル
+                ].filter(c => c.text);
+                choices.sort(() => Math.random() - 0.5);
 
                 let html = `
                     <div class="quiz-item" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
-                        <p style="font-weight:bold; margin: 0 0 5px 0;">${ui.q}${qNum}: ${qData.q}</p>
-                        <p style="font-size: 0.85em; color: var(--muted); margin: 0 0 10px 0;">${ui.hint} ${qData.h}</p>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                        <p style="font-weight:bold; margin: 0 0 5px 0;">${ui.q}${qNum}: ${escapeHtml(qData.q)}</p>
+                        <p style="font-size: 0.85em; color: var(--muted); margin: 0 0 10px 0;">${ui.hint} ${escapeHtml(qData.h)}</p>
+                        <div class="quiz-choices" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                 `;
                 choices.forEach((choice, idx) => {
-                    const safeText = choice.text.replace(/'/g, "\\'");
-                    const safeCorrect = qData.a.replace(/'/g, "\\'");
-                    html += `<button id="btn-${qNum}-${idx}" class="choice-btn" style="padding:12px; border:2px solid var(--border); border-radius:10px; cursor:pointer; background:#fff; font-weight:bold; color:var(--text);" onclick="checkQuizAnswer(${qNum}, ${choice.isCorrect}, '${safeCorrect}', 'btn-${qNum}-${idx}', '${lang}')">${choice.text}</button>`;
+                    const correctText = qData.a || "";
+                    html += `<button type="button" id="btn-${qNum}-${idx}" class="choice-btn" onclick="checkQuizAnswer(${qNum}, ${choice.isCorrect}, ${JSON.stringify(correctText)}, 'btn-${qNum}-${idx}', '${lang}')">${escapeHtml(choice.text)}</button>`;
                 });
                 html += `</div><div id="res-${qNum}" style="margin-top:10px; font-weight:bold;"></div></div>`;
                 container.innerHTML += html;
@@ -399,6 +410,8 @@
         window.checkQuizAnswer = function(qNum, isCorrect, correctText, btnId, lang) {
             const res = document.getElementById(`res-${qNum}`);
             const btn = document.getElementById(btnId);
+            if (!res || !btn) return;
+
             const msgs = {
                 ja: { success: "🌟 大せいかい！", fail: "❌ おしい！", show: "❌ 3回間違えました。正解は「{ans}」です。" },
                 zh: { success: "🌟 回答正确！", fail: "❌ 差不多！", show: "❌ 错了3次。正确答案是「{ans}」。" },
@@ -408,13 +421,15 @@
 
             if (isCorrect) {
                 res.innerHTML = `<span style='color:var(--success);'>${msg.success}</span>`;
-                btn.style.background = "#d1ffd1"; btn.style.borderColor = "var(--success)";
+                btn.style.background = "#d1ffd1";
+                btn.style.borderColor = "var(--success)";
                 window.quizMistakes[qNum] = 0;
             } else {
                 window.quizMistakes[qNum] = (window.quizMistakes[qNum] || 0) + 1;
-                btn.style.background = "#ffd1d1"; btn.style.borderColor = "var(--danger)";
+                btn.style.background = "#ffd1d1";
+                btn.style.borderColor = "var(--danger)";
                 if (window.quizMistakes[qNum] >= 3) {
-                    res.innerHTML = `<span style='color:var(--danger); font-weight:bold;'>${msg.show.replace('{ans}', correctText)}</span>`;
+                    res.innerHTML = `<span style='color:var(--danger); font-weight:bold;'>${msg.show.replace('{ans}', escapeHtml(correctText))}</span>`;
                 } else {
                     res.innerHTML = `<span style='color:var(--danger);'>${msg.fail} (${window.quizMistakes[qNum]}/3)</span>`;
                 }
