@@ -38,6 +38,7 @@
         #btn-ja { background: var(--tab-active-ja); } #btn-zh { background: var(--tab-active-zh); } #btn-en { background: var(--tab-active-en); }
         .lang-btn.active { opacity: 1; box-shadow: 0 4px 0 rgba(0,0,0,0.1); transform: translateY(-2px); }
         .passage-area { background: var(--passage-bg); padding: 25px; border-radius: 15px; border: 2px dashed var(--border); line-height: 2.2; font-size: 1.2rem; margin-bottom: 20px; position: relative; }
+        ruby rt { font-size: 0.55em; color: var(--muted); font-weight: normal; }
         .tts-btn { background: #fff; border: 2px solid var(--accent); color: var(--accent); padding: 5px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; }
         .tts-btn:hover { background: var(--accent); color: white; }
         
@@ -332,6 +333,18 @@
             if(mode === 'vocab') renderVocab();
         }
 
+        function formatChineseRuby(text) {
+            if (!text) return "";
+            return text.replace(/([\u4E00-\u9FA5]+)\s*\(([^)]+)\)/g, '<ruby>$1<rt>$2</rt></ruby>');
+        }
+
+        function stripTextForTTS(text) {
+            return String(text || "")
+                .replace(/<[^>]*>/g, '')
+                .replace(/([\u4E00-\u9FA5]+)\s*\([^)]+\)/g, '$1')
+                .trim();
+        }
+
         function shuffleArray(arr) {
             const a = arr.slice();
             for (let i = a.length - 1; i > 0; i--) {
@@ -353,7 +366,8 @@
             currentLang = lang;
             quizMistakes = { 1: 0, 2: 0, 3: 0 };
             ['ja', 'zh', 'en'].forEach(l => document.getElementById(`btn-${l}`).classList.toggle('active', l === lang));
-            document.getElementById('passage-text').innerHTML = currentBook[lang].passage || "";
+            const passage = currentBook[lang].passage || "";
+            document.getElementById('passage-text').innerHTML = lang === 'zh' ? formatChineseRuby(passage) : passage;
             renderQuizzes(lang);
         }
 
@@ -453,7 +467,7 @@
         let currentPlayingText = "";
         function playPassageTTS() {
             if(!currentBook) return;
-            const text = currentBook[currentLang].rawPassage.replace(/<[^>]*>?/gm, '').trim();
+            const text = stripTextForTTS(currentBook[currentLang].rawPassage || "");
             if(text) playTTS(text, currentLang);
         }
 
