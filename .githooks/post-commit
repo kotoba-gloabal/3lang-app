@@ -1,0 +1,10 @@
+#!/bin/sh
+# Auto-push to GitHub after each local commit (main/master only)
+branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || exit 0
+case "$branch" in
+  main|master) ;;
+  *) exit 0 ;;
+esac
+git remote get-url origin >/dev/null 2>&1 || exit 0
+git push -u origin "$branch" >/dev/null 2>&1 || git push origin "$branch"
+exit 0
