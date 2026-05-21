@@ -162,7 +162,7 @@
         let currentLang = 'ja';
         let currentMode = 'read';
         let isRecording = false;
-        let quizMistakes = { 1: 0, 2: 0, 3: 0 }; 
+        window.quizMistakes = {}; // ミスカウント用グローバル変数
 
         const SPREADSHEET_API_URL = "https://script.google.com/macros/s/AKfycbzwJhremvY0Rl5Bm3yrpQEdlXvQ2ZPVd0wh_TJhdRz0_Iqc0vevawkS6FLUpF76jaN2/exec";
 
@@ -339,26 +339,8 @@
             if(mode === 'vocab') renderVocab();
         }
 
-        function shuffleArray(arr) {
-            const a = arr.slice();
-            for (let i = a.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [a[i], a[j]] = [a[j], a[i]];
-            }
-            return a;
-        }
-
-        function escapeHtml(str) {
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;');
-        }
-
         function setLang(lang) {
             currentLang = lang;
-            quizMistakes = { 1: 0, 2: 0, 3: 0 };
             ['ja', 'zh', 'en'].forEach(l => document.getElementById(`btn-${l}`).classList.toggle('active', l === lang));
             document.getElementById('passage-text').innerHTML = currentBook[lang].passage || "";
             renderQuizzes(lang);
@@ -366,7 +348,10 @@
 
         function renderQuizzes(lang) {
             const container = document.getElementById('quiz-container');
-            if (!currentBook) return;
+            if (!currentBook || !container) return;
+
+            // 切り替え時にミスカウントをリセット
+            window.quizMistakes = {};
 
             const uiTexts = {
                 ja: { title: "🎯 クイズにちょうせん！", q: "Q", hint: "💡ヒント:" },
@@ -374,85 +359,58 @@
                 en: { title: "🎯 Quiz Time!", q: "Q", hint: "💡Hint:" }
             };
             const ui = uiTexts[lang] || uiTexts.ja;
-
             container.innerHTML = `<h3 style='margin-top:0; color:var(--title-bg);'>${ui.title}</h3>`;
-            
-            const createQ = (qNum) => {
-                const block = currentBook[`q${qNum}`];
-                if (!block || !block[lang] || !block[lang].q) return "";
-                const d = block[lang];
-                const correctAnswer = d.a || "";
-                const choices = shuffleArray([d.a, d.w1, d.w2, d.w3].filter(t => t && String(t).trim() !== ""));
 
-                const buttonsHtml = choices.map(choiceText =>
-                    `<button type="button" class="choice-btn" onclick="checkQuizAnswer(${qNum}, ${JSON.stringify(choiceText)}, ${JSON.stringify(correctAnswer)}, '${lang}')">${escapeHtml(choiceText)}</button>`
-                ).join('');
+            [1, 2, 3].forEach(qNum => {
+                const qData = currentBook[`q${qNum}`]?.[lang];
+                if (!qData || !qData.q) return;
 
-                return `
-                    <div class="quiz-item" id="quiz-item-${qNum}">
-                        <p style="font-weight:bold; margin: 0 0 10px 0;">${ui.q}${qNum}: ${escapeHtml(d.q)}</p>
-                        <div class="quiz-choices" id="choices-${qNum}">${buttonsHtml}</div>
-                        <div id="res-${qNum}" style="margin-top:10px; font-weight:bold;"></div>
-                    </div>
+                let choices = [
+                    { text: qData.a, isCorrect: true },
+                    { text: qData.w1, isCorrect: false },
+                    { text: qData.w2, isCorrect: false },
+                    { text: qData.w3, isCorrect: false }
+                ].filter(c => c.text); // 空の選択肢を除外
+
+                choices.sort(() => Math.random() - 0.5); // シャッフル
+
+                let html = `
+                    <div class="quiz-item" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed var(--border);">
+                        <p style="font-weight:bold; margin: 0 0 5px 0;">${ui.q}${qNum}: ${qData.q}</p>
+                        <p style="font-size: 0.85em; color: var(--muted); margin: 0 0 10px 0;">${ui.hint} ${qData.h}</p>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                 `;
-            };
-            
-            container.innerHTML += createQ(1);
-            container.innerHTML += createQ(2);
-            container.innerHTML += createQ(3);
-        }
-
-        function lockQuizChoices(qNum, pickedBtn, pickedClass) {
-            const area = document.getElementById(`choices-${qNum}`);
-            if (!area) return;
-            area.querySelectorAll('.choice-btn').forEach(btn => {
-                btn.disabled = true;
-                if (btn === pickedBtn && pickedClass) btn.classList.add(pickedClass);
+                choices.forEach((choice, idx) => {
+                    const safeText = choice.text.replace(/'/g, "\\'");
+                    const safeCorrect = qData.a.replace(/'/g, "\\'");
+                    html += `<button id="btn-${qNum}-${idx}" class="choice-btn" style="padding:12px; border:2px solid var(--border); border-radius:10px; cursor:pointer; background:#fff; font-weight:bold; color:var(--text);" onclick="checkQuizAnswer(${qNum}, ${choice.isCorrect}, '${safeCorrect}', 'btn-${qNum}-${idx}', '${lang}')">${choice.text}</button>`;
+                });
+                html += `</div><div id="res-${qNum}" style="margin-top:10px; font-weight:bold;"></div></div>`;
+                container.innerHTML += html;
             });
         }
 
-        function highlightCorrectChoice(qNum, correctAnswer) {
-            const area = document.getElementById(`choices-${qNum}`);
-            if (!area) return;
-            const target = String(correctAnswer).trim();
-            area.querySelectorAll('.choice-btn').forEach(btn => {
-                if (btn.textContent.trim() === target) btn.classList.add('correct-pick');
-            });
-        }
-
-        window.checkQuizAnswer = function(qNum, choiceText, correctAnswer, lang) {
+        window.checkQuizAnswer = function(qNum, isCorrect, correctText, btnId, lang) {
             const res = document.getElementById(`res-${qNum}`);
-            const block = currentBook[`q${qNum}`];
-            const data = block && block[lang] ? block[lang] : { h: "" };
-            const hint = data.h || "";
-            const pickedBtn = window.event && window.event.target ? window.event.target : null;
-            const isCorrect = String(choiceText).trim() === String(correctAnswer).trim();
-
+            const btn = document.getElementById(btnId);
             const msgs = {
-                ja: { success: "🌟 大せいかい！ すごいね！", fail: "❌ おしい！", show: "❌ 3回間違えました。正解は「{ans}」です。", hintLabel: "💡ヒント:" },
-                zh: { success: "🌟 回答正确！太棒了！", fail: "❌ 差不多！", show: "❌ 错了3次。正确答案是「{ans}」。", hintLabel: "💡提示:" },
-                en: { success: "🌟 Correct! Great job!", fail: "❌ Almost!", show: "❌ 3 mistakes. The answer is '{ans}'.", hintLabel: "💡Hint:" }
+                ja: { success: "🌟 大せいかい！", fail: "❌ おしい！", show: "❌ 3回間違えました。正解は「{ans}」です。" },
+                zh: { success: "🌟 回答正确！", fail: "❌ 差不多！", show: "❌ 错了3次。正确答案是「{ans}」。" },
+                en: { success: "🌟 Correct!", fail: "❌ Almost!", show: "❌ 3 mistakes. The answer is '{ans}'." }
             };
             const msg = msgs[lang] || msgs.ja;
-            const hintLine = hint ? `<br><span style="color:var(--muted); font-size:0.9em;">${msg.hintLabel} ${escapeHtml(hint)}</span>` : '';
 
             if (isCorrect) {
                 res.innerHTML = `<span style='color:var(--success);'>${msg.success}</span>`;
-                quizMistakes[qNum] = 0;
-                if (pickedBtn) pickedBtn.classList.add('correct-pick');
-                lockQuizChoices(qNum, null, null);
+                btn.style.background = "#d1ffd1"; btn.style.borderColor = "var(--success)";
+                window.quizMistakes[qNum] = 0;
             } else {
-                quizMistakes[qNum]++;
-                if (pickedBtn) {
-                    pickedBtn.classList.add('wrong-pick');
-                    pickedBtn.disabled = true;
-                }
-                if (quizMistakes[qNum] >= 3) {
-                    res.innerHTML = `<span style='color:var(--danger); font-weight:bold;'>${msg.show.replace('{ans}', escapeHtml(correctAnswer))}</span>`;
-                    lockQuizChoices(qNum, null, null);
-                    highlightCorrectChoice(qNum, correctAnswer);
+                window.quizMistakes[qNum] = (window.quizMistakes[qNum] || 0) + 1;
+                btn.style.background = "#ffd1d1"; btn.style.borderColor = "var(--danger)";
+                if (window.quizMistakes[qNum] >= 3) {
+                    res.innerHTML = `<span style='color:var(--danger); font-weight:bold;'>${msg.show.replace('{ans}', correctText)}</span>`;
                 } else {
-                    res.innerHTML = `<span style='color:var(--danger);'>${msg.fail} (${quizMistakes[qNum]}/3)</span>${hintLine}`;
+                    res.innerHTML = `<span style='color:var(--danger);'>${msg.fail} (${window.quizMistakes[qNum]}/3)</span>`;
                 }
             }
         };
